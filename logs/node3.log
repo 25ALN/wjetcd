@@ -1,0 +1,56 @@
+2026/04/07 16:27:09 Node 3 starting...
+2026/04/07 16:27:09 RaftAddr: 127.0.0.1:8003
+2026/04/07 16:27:09 Peers: [127.0.0.1:8001 127.0.0.1:8002 127.0.0.1:8003]
+2026/04/07 16:27:09 [3] start election at term 1, voted for self
+2026/04/07 16:27:09 [3] vote denied by 0
+2026/04/07 16:27:09 [3] vote denied by 1
+2026/04/07 16:27:09 success: 投出同意票给节点3
+2026/04/07 16:27:09 [3] state is not candidate, abandon election
+2026/04/07 16:27:09 success: 投出同意票给节点1
+2026/04/07 16:27:10 [3] start election at term 3, voted for self
+2026/04/07 16:27:10 success: 投出同意票给节点3
+2026/04/07 16:27:10 [3] state is not candidate, abandon election
+2026/04/07 16:27:10 [3] state is not candidate, abandon election
+2026/04/07 16:27:10 [3] state is not candidate, abandon election
+2026/04/07 16:27:10 [3] start election at term 4, voted for self
+2026/04/07 16:27:10 success: 投出同意票给节点3
+2026/04/07 16:27:10 success: 投出反对票给节点1
+2026/04/07 16:27:10 [3] state is not candidate, abandon election
+2026/04/07 16:27:10 [3] state is not candidate, abandon election
+2026/04/07 16:27:10 [3] state is not candidate, abandon election
+2026/04/07 16:27:11 [3] start election at term 5, voted for self
+2026/04/07 16:27:11 success: 投出同意票给节点3
+2026/04/07 16:27:11 [3] state is not candidate, abandon election
+2026/04/07 16:27:11 [3] state is not candidate, abandon election
+2026/04/07 16:27:11 [3] state is not candidate, abandon election
+2026/04/07 16:27:11 success: 投出同意票给节点1
+2026/04/07 16:27:11 [3] start election at term 7, voted for self
+2026/04/07 16:27:11 success: 投出同意票给节点3
+2026/04/07 16:27:11 [3] state is not candidate, abandon election
+2026/04/07 16:27:11 [3] state is not candidate, abandon election
+2026/04/07 16:27:11 [3] state is not candidate, abandon election
+2026/04/07 16:27:12 success: 投出同意票给节点1
+2026/04/07 16:27:12 [3] start election at term 9, voted for self
+2026/04/07 16:27:12 success: 投出同意票给节点3
+2026/04/07 16:27:12 [3] state is not candidate, abandon election
+2026/04/07 16:27:12 [3] state is not candidate, abandon election
+2026/04/07 16:27:12 [3] state is not candidate, abandon election
+Node 3 is not the leader
+2026/04/07 16:27:13 success: 投出同意票给节点1
+2026/04/07 16:27:13 [3] start election at term 11, voted for self
+2026/04/07 16:27:13 success: 投出同意票给节点3
+2026/04/07 16:27:13 [3] state is not candidate, abandon election
+2026/04/07 16:27:13 [3] state is not candidate, abandon election
+2026/04/07 16:27:13 [3] state is not candidate, abandon election
+2026/04/07 16:27:14 [3] start election at term 12, voted for self
+2026/04/07 16:27:14 success: 投出同意票给节点3
+2026/04/07 16:27:14 [3] state is not candidate, abandon election
+2026/04/07 16:27:14 [3] state is not candidate, abandon election
+2026/04/07 16:27:14 [3] state is not candidate, abandon election
+2026/04/07 16:27:14 success: 投出同意票给节点1
+2026/04/07 16:27:15 [3] start election at term 14, voted for self
+2026/04/07 16:27:15 success: 投出同意票给节点3
+2026/04/07 16:27:15 [3] state is not candidate, abandon election
+2026/04/07 16:27:15 [3] state is not candidate, abandon election
+2026/04/07 16:27:15 [3] state is not candidate, abandon election
+2026/04/07 16:27:15 success: 投出同意票给节点1
