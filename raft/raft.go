@@ -154,22 +154,20 @@ func (rf *Raft) readPersist() {
 
 	stateData := rf.persister.ReadRaftState()
 
-	if stateData == nil || len(stateData) < 1 { // bootstrap without any state?
+	if len(stateData) < 1 { // bootstrap without any state?
 		return
 	}
-	if stateData != nil && len(stateData) > 0 { // bootstrap without any state?
-		r := bytes.NewBuffer(stateData)
-		d := labgob.NewDecoder(r)
-		rf.votedFor = 0 // in case labgob waring
-		if d.Decode(&rf.CurrentTerm) != nil ||
-			d.Decode(&rf.votedFor) != nil ||
-			d.Decode(&rf.log) != nil ||
-			d.Decode(&rf.snapshotLastIncludeIndex) != nil ||
-			d.Decode(&rf.snapshotLastIncludeTerm) != nil {
-			//   error...
-			DPrintf(999, "%v: readPersist decode error\n", rf.SayMeL())
-			panic("readPersist decode error")
-		}
+	r := bytes.NewBuffer(stateData)
+	d := labgob.NewDecoder(r)
+	rf.votedFor = 0 // in case labgob waring
+	if d.Decode(&rf.CurrentTerm) != nil ||
+		d.Decode(&rf.votedFor) != nil ||
+		d.Decode(&rf.log) != nil ||
+		d.Decode(&rf.snapshotLastIncludeIndex) != nil ||
+		d.Decode(&rf.snapshotLastIncludeTerm) != nil {
+		//   error...
+		DPrintf(999, "%v: readPersist decode error\n", rf.SayMeL())
+		panic("readPersist decode error")
 	}
 	rf.snapshot = rf.persister.ReadSnapshot()
 	rf.CommitIndex = rf.snapshotLastIncludeIndex
@@ -228,6 +226,9 @@ func (rf *Raft) sendRequestVote(serverAddr string, args *RequestVoteArgs, reply 
 // 替换原有的 sendRequestAppendEntries 实现，复用 sendAppendEntries 进行 HTTP 通信
 func (rf *Raft) sendRequestAppendEntries(isHeartbeat bool, server int, args *RequestAppendEntriesArgs, reply *RequestAppendEntriesReply) bool {
 	// 获取目标节点地址
+	if server == rf.me-1 {
+		return false
+	}
 	serverAddr := ""
 	if server >= 0 && server < len(rf.peers) {
 		serverAddr = rf.peers[server]
@@ -235,6 +236,7 @@ func (rf *Raft) sendRequestAppendEntries(isHeartbeat bool, server int, args *Req
 	if serverAddr == "" {
 		return false
 	}
+	log.Printf("server addr is :%s,own addr is :%s", serverAddr, rf.peers[rf.me-1])
 	// 复用 sendAppendEntries 的实现
 	return rf.sendAppendEntries(serverAddr, args, reply)
 }
@@ -251,7 +253,6 @@ func (rf *Raft) sendRequestAppendEntries(isHeartbeat bool, server int, args *Req
 // if it's ever committed. the second return value is the current
 // term. the third return value is true if this server believes it is
 // the leader.
-// 这个方法只供测试使用，大概每一个raft实例都会开启一个start协程，然后去尝试给集群中的节点发送日志，但是只有Leader节点能成功发送rpc
 func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	index := -1
 	term := -1
@@ -269,7 +270,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	DPrintf(100, "%v: a command index=%v cmd=%T %v come", rf.SayMeL(), index, command, command)
 	rf.log.appendL(Entry{term, command})
 	rf.persist()
-	//rf.resetTrackedIndex()
+	rf.resetTrackedIndex()
 	DPrintf(101, "%v: check the newly added log index：%d", rf.SayMeL(), rf.log.LastLogIndex)
 	go rf.StartAppendEntries(false)
 
@@ -292,8 +293,7 @@ func (rf *Raft) Kill() {
 	rf.Mu.Lock()
 	defer rf.Mu.Unlock()
 	rf.ApplyHelper.Kill()
-	DPrintf(111, "%v : my applyHelper is killed!!", rf.SayMeL())
-
+	log.Printf("%v : Raft instance is killed!!", rf.SayMeL())
 	rf.State = Follower
 }
 
@@ -324,12 +324,13 @@ func (rf *Raft) StartAppendEntries(heart bool) {
 	peers := make([]string, len(rf.peers))
 	copy(peers, rf.peers)
 	// 并行向其他节点发送心跳或者日志，让他们知道此刻已经有一个leader产生
-	log.Printf("%v: detect the len of peers: %d", rf.SayMeL(), len(rf.peers))
+	log.Printf("%d has become leader,ready to send heart to else nodes", rf.me)
 	rf.Mu.Unlock()
 	for i, _ := range peers {
-		if i == rf.me {
+		if i == rf.me-1 {
 			continue
 		}
+		log.Printf("ready send heart to %d", i)
 		go rf.AppendEntries(i, heart)
 	}
 }
@@ -347,7 +348,6 @@ func (rf *Raft) AppendEntries(targetServerId int, heart bool) {
 		args.LeaderTerm = rf.CurrentTerm
 		log.Printf("%v: %d is a leader, ready sending heartbeart to follower %d....", rf.SayMeL(), rf.me, targetServerId)
 		rf.Mu.Unlock()
-
 		ok := rf.sendRequestAppendEntries(true, targetServerId, &args, &reply)
 
 		rf.Mu.Lock()
@@ -368,6 +368,7 @@ func (rf *Raft) AppendEntries(targetServerId int, heart bool) {
 			return
 		}
 		if reply.FollowerTerm > rf.CurrentTerm {
+			log.Printf("节点任期更大,即将变为follower")
 			// 从节点任期比自己大就变为follower
 			rf.CurrentTerm = reply.FollowerTerm
 			rf.votedFor = None
@@ -433,6 +434,7 @@ func (rf *Raft) AppendEntries(targetServerId int, heart bool) {
 		DPrintf(111, "%v: get reply from %v reply.Term=%v reply.Success=%v reply.PrevLogTerm=%v reply.PrevLogIndex=%v myinfo:rf.log.FirstLogIndex=%v rf.log.LastLogIndex=%v\n",
 			rf.SayMeL(), targetServerId, reply.FollowerTerm, reply.Success, reply.PrevLogTerm, reply.PrevLogIndex, rf.log.FirstLogIndex, rf.log.LastLogIndex)
 		if reply.FollowerTerm > rf.CurrentTerm {
+			log.Printf("term over self will become follower")
 			rf.State = Follower
 			rf.votedFor = None
 			rf.CurrentTerm = reply.FollowerTerm
@@ -526,6 +528,7 @@ func (rf *Raft) AppendEntries2(targetServerId int, heart bool) {
 			// 从节点任期比自己大就变为follower
 			rf.CurrentTerm = reply.FollowerTerm
 			rf.votedFor = None
+			log.Printf("节点任期更大,即将变为follower")
 			rf.State = Follower
 			// follower身份有改变需要持久化
 			rf.persist()
@@ -588,6 +591,7 @@ func (rf *Raft) AppendEntries2(targetServerId int, heart bool) {
 		DPrintf(111, "%v: get reply from %v reply.Term=%v reply.Success=%v reply.PrevLogTerm=%v reply.PrevLogIndex=%v myinfo:rf.log.FirstLogIndex=%v rf.log.LastLogIndex=%v\n",
 			rf.SayMeL(), targetServerId, reply.FollowerTerm, reply.Success, reply.PrevLogTerm, reply.PrevLogIndex, rf.log.FirstLogIndex, rf.log.LastLogIndex)
 		if reply.FollowerTerm > rf.CurrentTerm {
+			log.Printf("will become follower")
 			rf.State = Follower
 			rf.votedFor = None
 			rf.CurrentTerm = reply.FollowerTerm
@@ -695,6 +699,7 @@ func Make(peers []string, me int,
 	// Your initialization code here (2A, 2B, 2C).
 	rf.CurrentTerm = 0
 	rf.votedFor = None
+	log.Printf("initialize the raft node become follower")
 	rf.State = Follower //设置节点的初始状态为follower
 	rf.resetElectionTimer()
 	rf.heartbeatTimeout = heartbeatTimeout // 这个是固定的
@@ -746,9 +751,6 @@ func (rf *Raft) ticker() {
 				rf.resetHeartbeatTimer()
 			}
 			rf.StartAppendEntries(isHeartbeat)
-
-			//rf.StartAppendEntries(true)
-
 		}
 		time.Sleep(tickInterval)
 	}
@@ -757,11 +759,14 @@ func (rf *Raft) ticker() {
 
 func (rf *Raft) getLastEntryTerm() int {
 	if rf.log.LastLogIndex >= rf.log.FirstLogIndex {
-		return rf.log.getOneEntry(rf.log.LastLogIndex).Term
+		entry := rf.log.getOneEntry(rf.log.LastLogIndex)
+		if entry == nil {
+			return 0
+		}
+		return entry.Term
 	} else {
 		return rf.snapshotLastIncludeTerm
 	}
-	return -1
 
 }
 func (rf *Raft) GetLastIncludeIndex() int {

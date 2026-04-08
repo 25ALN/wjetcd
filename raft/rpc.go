@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"sync"
-	"time"
 )
 
 // 启动 Raft 节点 HTTP 服务器
@@ -52,14 +51,15 @@ func (rf *Raft) handleAppendEntriesRPC(args *RequestAppendEntriesArgs, reply *Re
 	// term更新
 	if args.LeaderTerm > rf.CurrentTerm {
 		rf.CurrentTerm = args.LeaderTerm
-		rf.State = Follower
 		rf.votedFor = -1
 		rf.persist()
 	}
-	// 只要收到心跳或日志追加请求，重置选举定时器，防止频繁选举
-	rf.lastHeartbeat = time.Now()
-	//rf.State = Follower
-	// TODO: 日志一致性检查与日志追加逻辑可后续完善
+	// 只要收到心跳或日志同步请求（AppendEntries），都降级为Follower，防止脑裂
+	if rf.State != Follower {
+		log.Printf("receive heart become follower")
+		rf.State = Follower
+	}
+	rf.resetElectionTimer()
 	reply.FollowerTerm = rf.CurrentTerm
 	reply.Success = true
 }

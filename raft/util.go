@@ -26,16 +26,14 @@ func max(a, b int) int {
 func min(a, b int) int {
 	if a < b {
 		return a
-	} else {
-		return b
 	}
+	return b
 }
 func ifCond(cond bool, a, b interface{}) interface{} {
 	if cond {
 		return a
-	} else {
-		return b
 	}
+	return b
 }
 func getcount() func() int {
 	cnt := 1000

@@ -71,7 +71,6 @@ func NewServer(
 			log.Fatalf("Raft HTTP server failed: %v", err)
 		}
 	}()
-
 	// 启动应用日志循环
 	go s.applyLoop()
 
@@ -87,6 +86,14 @@ func (s *Server) applyLoop() {
 
 		s.mu.Lock()
 		if cmd, ok := msg.Command.(kv.Command); ok {
+			log.Printf("ready to write logs into files")
+			if s.wal != nil {
+				if err := s.wal.WriteEntry(cmd); err != nil {
+					log.Printf("[Server %d] WAL write error: %v", s.id, err)
+				} else {
+					log.Printf("success save datas")
+				}
+			}
 			result, err := s.store.Apply(cmd)
 			if err != nil {
 				log.Printf("[Server %d] Apply error: %v", s.id, err)

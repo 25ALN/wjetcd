@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"log"
 	"time"
 )
 
@@ -11,8 +12,8 @@ func (rf *Raft) pastHeartbeatTimeout() bool {
 }
 
 func (rf *Raft) resetHeartbeatTimer() {
-	rf.Mu.Lock()
-	defer rf.Mu.Unlock()
+	// rf.Mu.Lock()
+	// defer rf.Mu.Unlock()
 	rf.lastHeartbeat = time.Now()
 }
 
@@ -28,6 +29,7 @@ func (rf *Raft) HandleAppendEntriesRPC(args *RequestAppendEntriesArgs, reply *Re
 		return
 	}
 	rf.resetElectionTimer()
+	log.Printf("ready to receive heart become follower(right now is %d)", rf.State)
 	rf.State = Follower // 需要转变自己的身份为Follower
 
 	if args.LeaderTerm > rf.CurrentTerm {

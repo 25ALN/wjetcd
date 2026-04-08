@@ -8,7 +8,7 @@ import (
 
 // let the base election timeout be T.
 // the election timeout is in the range [T, 2T).
-const baseElectionTimeout = 300
+const baseElectionTimeout = 1000
 const None = -1
 
 // func (rf *Raft) StartElection() {
@@ -121,7 +121,7 @@ func (rf *Raft) StartElection() {
 				return
 			}
 			if rf.State != Candidate {
-				log.Printf("[%d] state is not candidate, abandon election", rf.me)
+				log.Printf("[%d] state is not candidate, abandon election,term is %d", rf.me, rf.CurrentTerm)
 				return
 			}
 			if rf.electionDone {
@@ -146,8 +146,8 @@ func (rf *Raft) StartElection() {
 				log.Printf("[%d] got vote from %d, now %d/%d", rf.me, serverId, rf.electionVotes, totalPeers)
 				if !rf.electionDone && rf.electionVotes > totalPeers/2 {
 					log.Printf("[%d] become leader at term %d", rf.me, term)
-					rf.electionDone = true
 					rf.becomeLeader()
+					rf.electionDone = true
 				}
 			} else {
 				log.Printf("[%d] vote denied by %d", rf.me, serverId)
@@ -171,22 +171,21 @@ func (rf *Raft) resetElectionTimer() {
 
 func (rf *Raft) becomeCandidate() {
 	rf.resetElectionTimer()
+	log.Printf("%d preparing to start election at term %d", rf.State, rf.CurrentTerm)
 	rf.State = Candidate
 	rf.CurrentTerm++
 	rf.votedFor = rf.me
 }
 
 func (rf *Raft) becomeLeader() {
+
 	rf.State = Leader
+	log.Printf("[%d] is elected as leader at term %d", rf.me, rf.CurrentTerm)
+	// 初始化peerTrackers，nextIndex为LastLogIndex+1，matchIndex为0
+	rf.resetTrackedIndex()
+	log.Printf("%v :becomes leader and reset TrackedIndex, nextIndex=%d for all peers\n", rf.SayMeL(), rf.log.LastLogIndex+1)
 	rf.resetHeartbeatTimer()
 	rf.resetElectionTimer()
-	// 初始化peerTrackers，nextIndex为LastLogIndex+1，matchIndex为0
-	for i := range rf.peerTrackers {
-		rf.peerTrackers[i].nextIndex = rf.log.LastLogIndex + 1
-		rf.peerTrackers[i].matchIndex = 0
-	}
-	log.Printf("%v :becomes leader and reset TrackedIndex, nextIndex=%d for all peers\n", rf.SayMeL(), rf.log.LastLogIndex+1)
-	rf.resetTrackedIndex()
 	// 立即广播一次心跳，防止集群状态不一致
 	go rf.StartAppendEntries(true)
 }
@@ -204,7 +203,9 @@ func (rf *Raft) HandleHeartbeatRPC(args *RequestAppendEntriesArgs, reply *Reques
 	}
 	rf.resetElectionTimer()
 	// 需要转变自己的身份为Follower
+
 	rf.State = Follower
+	log.Printf("received heartbeat from leader %d at term %d, reset election timer\n", args.LeaderId, args.LeaderTerm)
 	// 承认来者是个合法的新leader，则任期一定大于自己，此时需要设置votedFor为-1以及
 	if args.LeaderTerm > rf.CurrentTerm {
 		rf.votedFor = None
@@ -219,7 +220,6 @@ func (rf *Raft) HandleHeartbeatRPC(args *RequestAppendEntriesArgs, reply *Reques
 
 // example RequestVoteRPC handler.
 func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
-	// Your code here (2A, 2B).
 	rf.Mu.Lock()
 	defer rf.Mu.Unlock()
 	reply.VoteGranted = true // 默认设置响应体为投同意票状态
@@ -235,23 +235,25 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	if args.Term > rf.CurrentTerm {
 		rf.CurrentTerm = args.Term
 		rf.votedFor = None
-		rf.State = Follower
 		reply.Term = rf.CurrentTerm
 		rf.persist()
 	}
 	DPrintf(500, "%v: reply to %v myLastLogterm=%v myLastLogIndex=%v args.LastLogTerm=%v args.LastLogIndex=%v\n",
 		rf.SayMeL(), args.CandidateId, rf.getLastEntryTerm(), rf.log.LastLogIndex, args.LastLogTerm, args.LastLogIndex)
 
-	// candidate节点发送过来的日志索引以及任期必须大于等于自己的日志索引及任期
 	update := false
-	update = update || args.LastLogTerm > rf.getLastEntryTerm()
-	update = update || args.LastLogTerm == rf.getLastEntryTerm() && args.LastLogIndex >= rf.log.LastLogIndex
-
+	// candidate节点发送过来的日志索引以及任期必须大于等于自己的日志索引及任期
+	if rf.log.LastLogIndex < rf.log.FirstLogIndex {
+		// 日志为空，允许投票
+		update = true
+	} else {
+		update = args.LastLogTerm > rf.getLastEntryTerm()
+		update = update || (args.LastLogTerm == rf.getLastEntryTerm() && args.LastLogIndex >= rf.log.LastLogIndex)
+	}
 	if (rf.votedFor == -1 || rf.votedFor == args.CandidateId) && update {
-		//竞选任期大于自身任期，则更新自身任期，并转为follower
+		// 只更新votedFor和选举定时器，不主动降级为Follower
 		rf.votedFor = args.CandidateId
-		rf.State = Follower
-		rf.resetElectionTimer() //自己的票已经投出时就转为follower状态
+		rf.resetElectionTimer()
 		log.Printf("%v: 投出同意票给节点%d", rf.SayMeL(), args.CandidateId)
 		rf.persist()
 
@@ -260,5 +262,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		reply.Term = rf.CurrentTerm
 		log.Printf("%v: 投出反对票给节点%d", rf.SayMeL(), args.CandidateId)
 	}
+	// 只要收到投票请求，无论同意与否都重置选举超时，防止选举风暴
+	rf.resetElectionTimer()
 
 }

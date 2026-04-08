@@ -1,49 +1,1251 @@
-2026/04/07 16:27:09 Node 2 starting...
-2026/04/07 16:27:09 RaftAddr: 127.0.0.1:8002
-2026/04/07 16:27:09 Peers: [127.0.0.1:8001 127.0.0.1:8002 127.0.0.1:8003]
-2026/04/07 16:27:09 [2] start election at term 1, voted for self
-2026/04/07 16:27:09 success: 投出同意票给节点2
-2026/04/07 16:27:09 [2] state is not candidate, abandon election
-2026/04/07 16:27:09 [2] state is not candidate, abandon election
-2026/04/07 16:27:09 success: 投出反对票给节点3
-2026/04/07 16:27:10 [2] start election at term 2, voted for self
-2026/04/07 16:27:10 success: 投出同意票给节点2
-2026/04/07 16:27:10 [2] state is not candidate, abandon election
-2026/04/07 16:27:10 [2] state is not candidate, abandon election
-2026/04/07 16:27:10 success: 投出同意票给节点3
-2026/04/07 16:27:10 success: 投出同意票给节点3
-2026/04/07 16:27:11 success: 投出同意票给节点3
-2026/04/07 16:27:11 [2] start election at term 6, voted for self
-2026/04/07 16:27:11 success: 投出同意票给节点2
-2026/04/07 16:27:11 [2] state is not candidate, abandon election
-2026/04/07 16:27:11 [2] state is not candidate, abandon election
-2026/04/07 16:27:11 success: 投出同意票给节点3
-2026/04/07 16:27:12 [2] start election at term 8, voted for self
-2026/04/07 16:27:12 success: 投出同意票给节点2
-2026/04/07 16:27:12 [2] state is not candidate, abandon election
-2026/04/07 16:27:12 [2] state is not candidate, abandon election
-2026/04/07 16:27:12 success: 投出同意票给节点3
-Node 2 is not the leader
-2026/04/07 16:27:13 [2] start election at term 10, voted for self
-2026/04/07 16:27:13 success: 投出同意票给节点2
-2026/04/07 16:27:13 [2] state is not candidate, abandon election
-2026/04/07 16:27:13 [2] state is not candidate, abandon election
-2026/04/07 16:27:13 [2] start election at term 11, voted for self
-2026/04/07 16:27:13 success: 投出同意票给节点2
-2026/04/07 16:27:13 [2] state is not candidate, abandon election
-2026/04/07 16:27:13 [2] state is not candidate, abandon election
-2026/04/07 16:27:13 success: 投出反对票给节点3
-2026/04/07 16:27:14 [2] start election at term 12, voted for self
-2026/04/07 16:27:14 success: 投出同意票给节点2
-2026/04/07 16:27:14 [2] state is not candidate, abandon election
-2026/04/07 16:27:14 [2] state is not candidate, abandon election
-2026/04/07 16:27:14 success: 投出反对票给节点3
-2026/04/07 16:27:14 [2] start election at term 13, voted for self
-2026/04/07 16:27:14 success: 投出同意票给节点2
-2026/04/07 16:27:14 [2] state is not candidate, abandon election
-2026/04/07 16:27:14 [2] state is not candidate, abandon election
-2026/04/07 16:27:14 [2] start election at term 14, voted for self
-2026/04/07 16:27:14 success: 投出同意票给节点2
-2026/04/07 16:27:14 [2] state is not candidate, abandon election
-2026/04/07 16:27:14 [2] state is not candidate, abandon election
-2026/04/07 16:27:15 success: 投出反对票给节点3
+2026/04/08 21:31:57 Node 2 starting...
+2026/04/08 21:31:57 RaftAddr: 127.0.0.1:8002
+2026/04/08 21:31:57 Peers: [127.0.0.1:8001 127.0.0.1:8002 127.0.0.1:8003]
+2026/04/08 21:31:57 initialize the raft node become follower
+2026/04/08 21:31:58 1 preparing to start election at term 0
+2026/04/08 21:31:58 [2] start election at term 1, voted for self
+2026/04/08 21:31:58 success: 投出同意票给节点2
+2026/04/08 21:31:58 [2] got vote from 1, now 2/3
+2026/04/08 21:31:58 [2] become leader at term 1
+2026/04/08 21:31:58 [2] is elected as leader at term 1
+2026/04/08 21:31:58 实例 2 更新实例0的nextIndex为: 0...
+2026/04/08 21:31:58 实例 2 更新实例1的nextIndex为: 0...
+2026/04/08 21:31:58 实例 2 更新实例2的nextIndex为: 0...
+2026/04/08 21:31:58 success :becomes leader and reset TrackedIndex, nextIndex=0 for all peers
+2026/04/08 21:31:58 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:31:58 ready send heart to 0
+2026/04/08 21:31:58 ready send heart to 2
+2026/04/08 21:31:58 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:31:58 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:31:58 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:31:58 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:31:58 [2] state is not candidate, abandon election,term is 1
+2026/04/08 21:31:58 响应成功
+2026/04/08 21:31:58 响应成功
+2026/04/08 21:31:58 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:31:58 ready send heart to 0
+2026/04/08 21:31:58 ready send heart to 2
+2026/04/08 21:31:58 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:31:58 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:31:59 ready send heart to 0
+2026/04/08 21:31:59 ready send heart to 2
+2026/04/08 21:31:59 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:31:59 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:31:59 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 响应成功
+2026/04/08 21:31:59 响应成功
+2026/04/08 21:31:59 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:31:59 ready send heart to 0
+2026/04/08 21:31:59 ready send heart to 2
+2026/04/08 21:31:59 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:31:59 ready send heart to 0
+2026/04/08 21:31:59 ready send heart to 2
+2026/04/08 21:31:59 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:31:59 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:31:59 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 响应成功
+2026/04/08 21:31:59 响应成功
+2026/04/08 21:31:59 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:31:59 ready send heart to 0
+2026/04/08 21:31:59 ready send heart to 2
+2026/04/08 21:31:59 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:31:59 ready send heart to 0
+2026/04/08 21:31:59 ready send heart to 2
+2026/04/08 21:31:59 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:31:59 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:31:59 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 响应成功
+2026/04/08 21:31:59 响应成功
+2026/04/08 21:31:59 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:31:59 ready send heart to 0
+2026/04/08 21:31:59 ready send heart to 2
+2026/04/08 21:31:59 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:31:59 ready send heart to 0
+2026/04/08 21:31:59 ready send heart to 2
+2026/04/08 21:31:59 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:31:59 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:31:59 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 响应成功
+2026/04/08 21:31:59 响应成功
+2026/04/08 21:31:59 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:31:59 ready send heart to 0
+2026/04/08 21:31:59 ready send heart to 2
+2026/04/08 21:31:59 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:31:59 ready send heart to 0
+2026/04/08 21:31:59 ready send heart to 2
+2026/04/08 21:31:59 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:31:59 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:31:59 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 响应成功
+2026/04/08 21:31:59 响应成功
+2026/04/08 21:31:59 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:31:59 ready send heart to 0
+2026/04/08 21:31:59 ready send heart to 2
+2026/04/08 21:31:59 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:31:59 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:00 ready send heart to 0
+2026/04/08 21:32:00 ready send heart to 2
+2026/04/08 21:32:00 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:00 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:00 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 响应成功
+2026/04/08 21:32:00 响应成功
+2026/04/08 21:32:00 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:00 ready send heart to 0
+2026/04/08 21:32:00 ready send heart to 2
+2026/04/08 21:32:00 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 实例 2 更新实例0的nextIndex为: 1...
+2026/04/08 21:32:00 实例 2 更新实例1的nextIndex为: 1...
+2026/04/08 21:32:00 实例 2 更新实例2的nextIndex为: 1...
+2026/04/08 21:32:00 [Server 2] Submit command at index 0, term 1
+2026/04/08 21:32:00 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:00 ready send heart to 0
+2026/04/08 21:32:00 ready send heart to 2
+2026/04/08 21:32:00 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:00 ready send heart to 0
+2026/04/08 21:32:00 ready send heart to 2
+2026/04/08 21:32:00 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:00 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:00 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 响应成功
+2026/04/08 21:32:00 响应成功
+2026/04/08 21:32:00 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:00 ready send heart to 0
+2026/04/08 21:32:00 ready send heart to 2
+2026/04/08 21:32:00 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:00 ready send heart to 0
+2026/04/08 21:32:00 ready send heart to 2
+2026/04/08 21:32:00 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:00 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:00 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 响应成功
+2026/04/08 21:32:00 响应成功
+2026/04/08 21:32:00 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:00 ready send heart to 0
+2026/04/08 21:32:00 ready send heart to 2
+2026/04/08 21:32:00 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:00 ready send heart to 0
+2026/04/08 21:32:00 ready send heart to 2
+2026/04/08 21:32:00 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:00 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:00 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 响应成功
+2026/04/08 21:32:00 响应成功
+2026/04/08 21:32:00 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:00 ready send heart to 0
+2026/04/08 21:32:00 ready send heart to 2
+2026/04/08 21:32:00 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:00 ready send heart to 0
+2026/04/08 21:32:00 ready send heart to 2
+2026/04/08 21:32:00 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:00 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:00 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 响应成功
+2026/04/08 21:32:00 响应成功
+2026/04/08 21:32:00 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:00 ready send heart to 0
+2026/04/08 21:32:00 ready send heart to 2
+2026/04/08 21:32:00 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:00 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:01 ready send heart to 0
+2026/04/08 21:32:01 ready send heart to 2
+2026/04/08 21:32:01 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:01 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:01 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 响应成功
+2026/04/08 21:32:01 响应成功
+2026/04/08 21:32:01 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:01 ready send heart to 0
+2026/04/08 21:32:01 ready send heart to 2
+2026/04/08 21:32:01 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:01 ready send heart to 0
+2026/04/08 21:32:01 ready send heart to 2
+2026/04/08 21:32:01 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:01 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:01 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 响应成功
+2026/04/08 21:32:01 响应成功
+2026/04/08 21:32:01 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:01 ready send heart to 0
+2026/04/08 21:32:01 ready send heart to 2
+2026/04/08 21:32:01 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:01 ready send heart to 0
+2026/04/08 21:32:01 ready send heart to 2
+2026/04/08 21:32:01 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:01 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:01 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 响应成功
+2026/04/08 21:32:01 响应成功
+2026/04/08 21:32:01 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:01 ready send heart to 0
+2026/04/08 21:32:01 ready send heart to 2
+2026/04/08 21:32:01 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:01 ready send heart to 0
+2026/04/08 21:32:01 ready send heart to 2
+2026/04/08 21:32:01 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:01 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:01 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 响应成功
+2026/04/08 21:32:01 响应成功
+2026/04/08 21:32:01 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:01 ready send heart to 0
+2026/04/08 21:32:01 ready send heart to 2
+2026/04/08 21:32:01 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:01 ready send heart to 0
+2026/04/08 21:32:01 ready send heart to 2
+2026/04/08 21:32:01 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:01 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:01 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 响应成功
+2026/04/08 21:32:01 响应成功
+2026/04/08 21:32:01 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:01 ready send heart to 0
+2026/04/08 21:32:01 ready send heart to 2
+2026/04/08 21:32:01 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:01 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:02 ready send heart to 0
+2026/04/08 21:32:02 ready send heart to 2
+2026/04/08 21:32:02 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:02 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:02 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 响应成功
+2026/04/08 21:32:02 响应成功
+2026/04/08 21:32:02 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:02 ready send heart to 0
+2026/04/08 21:32:02 ready send heart to 2
+2026/04/08 21:32:02 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:02 ready send heart to 0
+2026/04/08 21:32:02 ready send heart to 2
+2026/04/08 21:32:02 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:02 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:02 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 响应成功
+2026/04/08 21:32:02 响应成功
+2026/04/08 21:32:02 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:02 ready send heart to 0
+2026/04/08 21:32:02 ready send heart to 2
+2026/04/08 21:32:02 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:02 ready send heart to 0
+2026/04/08 21:32:02 ready send heart to 2
+2026/04/08 21:32:02 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:02 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:02 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 响应成功
+2026/04/08 21:32:02 响应成功
+2026/04/08 21:32:02 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:02 ready send heart to 0
+2026/04/08 21:32:02 ready send heart to 2
+2026/04/08 21:32:02 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:02 ready send heart to 0
+2026/04/08 21:32:02 ready send heart to 2
+2026/04/08 21:32:02 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:02 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:02 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 响应成功
+2026/04/08 21:32:02 响应成功
+2026/04/08 21:32:02 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:02 ready send heart to 0
+2026/04/08 21:32:02 ready send heart to 2
+2026/04/08 21:32:02 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:02 ready send heart to 0
+2026/04/08 21:32:02 ready send heart to 2
+2026/04/08 21:32:02 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:02 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:02 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 响应成功
+2026/04/08 21:32:02 响应成功
+2026/04/08 21:32:02 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:02 ready send heart to 0
+2026/04/08 21:32:02 ready send heart to 2
+2026/04/08 21:32:02 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:02 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:03 ready send heart to 0
+2026/04/08 21:32:03 ready send heart to 2
+2026/04/08 21:32:03 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:03 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:03 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 响应成功
+2026/04/08 21:32:03 响应成功
+2026/04/08 21:32:03 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:03 ready send heart to 0
+2026/04/08 21:32:03 ready send heart to 2
+2026/04/08 21:32:03 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:03 ready send heart to 0
+2026/04/08 21:32:03 ready send heart to 2
+2026/04/08 21:32:03 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:03 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:03 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 响应成功
+2026/04/08 21:32:03 响应成功
+2026/04/08 21:32:03 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:03 ready send heart to 0
+2026/04/08 21:32:03 ready send heart to 2
+2026/04/08 21:32:03 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:03 ready send heart to 0
+2026/04/08 21:32:03 ready send heart to 2
+2026/04/08 21:32:03 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:03 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:03 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 响应成功
+2026/04/08 21:32:03 响应成功
+2026/04/08 21:32:03 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:03 ready send heart to 0
+2026/04/08 21:32:03 ready send heart to 2
+2026/04/08 21:32:03 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:03 ready send heart to 0
+2026/04/08 21:32:03 ready send heart to 2
+2026/04/08 21:32:03 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:03 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:03 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 响应成功
+2026/04/08 21:32:03 响应成功
+2026/04/08 21:32:03 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:03 ready send heart to 0
+2026/04/08 21:32:03 ready send heart to 2
+2026/04/08 21:32:03 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:03 ready send heart to 0
+2026/04/08 21:32:03 ready send heart to 2
+2026/04/08 21:32:03 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:03 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:03 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 响应成功
+2026/04/08 21:32:03 响应成功
+2026/04/08 21:32:03 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:03 ready send heart to 0
+2026/04/08 21:32:03 ready send heart to 2
+2026/04/08 21:32:03 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:03 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:04 ready send heart to 0
+2026/04/08 21:32:04 ready send heart to 2
+2026/04/08 21:32:04 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:04 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:04 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 响应成功
+2026/04/08 21:32:04 响应成功
+2026/04/08 21:32:04 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:04 ready send heart to 0
+2026/04/08 21:32:04 ready send heart to 2
+2026/04/08 21:32:04 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:04 ready send heart to 0
+2026/04/08 21:32:04 ready send heart to 2
+2026/04/08 21:32:04 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:04 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:04 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 响应成功
+2026/04/08 21:32:04 响应成功
+2026/04/08 21:32:04 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:04 ready send heart to 0
+2026/04/08 21:32:04 ready send heart to 2
+2026/04/08 21:32:04 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:04 ready send heart to 0
+2026/04/08 21:32:04 ready send heart to 2
+2026/04/08 21:32:04 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:04 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:04 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 响应成功
+2026/04/08 21:32:04 响应成功
+2026/04/08 21:32:04 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:04 ready send heart to 0
+2026/04/08 21:32:04 ready send heart to 2
+2026/04/08 21:32:04 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:04 ready send heart to 0
+2026/04/08 21:32:04 ready send heart to 2
+2026/04/08 21:32:04 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:04 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:04 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 响应成功
+2026/04/08 21:32:04 响应成功
+2026/04/08 21:32:04 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:04 ready send heart to 0
+2026/04/08 21:32:04 ready send heart to 2
+2026/04/08 21:32:04 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:04 ready send heart to 0
+2026/04/08 21:32:04 ready send heart to 2
+2026/04/08 21:32:04 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:04 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:04 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 响应成功
+2026/04/08 21:32:04 响应成功
+2026/04/08 21:32:04 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:04 ready send heart to 0
+2026/04/08 21:32:04 ready send heart to 2
+2026/04/08 21:32:04 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:04 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:05 ready send heart to 0
+2026/04/08 21:32:05 ready send heart to 2
+2026/04/08 21:32:05 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:05 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:05 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 响应成功
+2026/04/08 21:32:05 响应成功
+2026/04/08 21:32:05 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:05 ready send heart to 0
+2026/04/08 21:32:05 ready send heart to 2
+2026/04/08 21:32:05 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:05 ready send heart to 0
+2026/04/08 21:32:05 ready send heart to 2
+2026/04/08 21:32:05 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:05 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:05 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 响应成功
+2026/04/08 21:32:05 响应成功
+2026/04/08 21:32:05 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:05 ready send heart to 0
+2026/04/08 21:32:05 ready send heart to 2
+2026/04/08 21:32:05 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:05 ready send heart to 0
+2026/04/08 21:32:05 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:05 ready send heart to 2
+2026/04/08 21:32:05 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:05 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 响应成功
+2026/04/08 21:32:05 响应成功
+2026/04/08 21:32:05 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:05 ready send heart to 0
+2026/04/08 21:32:05 ready send heart to 2
+2026/04/08 21:32:05 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:05 ready send heart to 0
+2026/04/08 21:32:05 ready send heart to 2
+2026/04/08 21:32:05 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:05 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:05 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 响应成功
+2026/04/08 21:32:05 响应成功
+2026/04/08 21:32:05 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:05 ready send heart to 0
+2026/04/08 21:32:05 ready send heart to 2
+2026/04/08 21:32:05 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:05 ready send heart to 0
+2026/04/08 21:32:05 ready send heart to 2
+2026/04/08 21:32:05 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:05 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:05 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 响应成功
+2026/04/08 21:32:05 响应成功
+2026/04/08 21:32:05 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:05 ready send heart to 0
+2026/04/08 21:32:05 ready send heart to 2
+2026/04/08 21:32:05 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:05 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:06 ready send heart to 0
+2026/04/08 21:32:06 ready send heart to 2
+2026/04/08 21:32:06 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:06 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:06 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 响应成功
+2026/04/08 21:32:06 响应成功
+2026/04/08 21:32:06 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:06 ready send heart to 0
+2026/04/08 21:32:06 ready send heart to 2
+2026/04/08 21:32:06 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:06 ready send heart to 0
+2026/04/08 21:32:06 ready send heart to 2
+2026/04/08 21:32:06 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:06 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:06 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 响应成功
+2026/04/08 21:32:06 响应成功
+2026/04/08 21:32:06 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:06 ready send heart to 0
+2026/04/08 21:32:06 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 ready send heart to 2
+2026/04/08 21:32:06 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:06 ready send heart to 0
+2026/04/08 21:32:06 ready send heart to 2
+2026/04/08 21:32:06 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:06 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:06 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 响应成功
+2026/04/08 21:32:06 响应成功
+2026/04/08 21:32:06 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:06 ready send heart to 0
+2026/04/08 21:32:06 ready send heart to 2
+2026/04/08 21:32:06 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:06 ready send heart to 0
+2026/04/08 21:32:06 ready send heart to 2
+2026/04/08 21:32:06 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:06 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:06 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 响应成功
+2026/04/08 21:32:06 响应成功
+2026/04/08 21:32:06 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:06 ready send heart to 0
+2026/04/08 21:32:06 ready send heart to 2
+2026/04/08 21:32:06 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:06 ready send heart to 0
+2026/04/08 21:32:06 ready send heart to 2
+2026/04/08 21:32:06 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:06 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:06 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 响应成功
+2026/04/08 21:32:06 响应成功
+2026/04/08 21:32:06 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:06 ready send heart to 0
+2026/04/08 21:32:06 ready send heart to 2
+2026/04/08 21:32:06 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:06 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:07 ready send heart to 0
+2026/04/08 21:32:07 ready send heart to 2
+2026/04/08 21:32:07 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:07 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:07 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 响应成功
+2026/04/08 21:32:07 响应成功
+2026/04/08 21:32:07 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:07 ready send heart to 0
+2026/04/08 21:32:07 ready send heart to 2
+2026/04/08 21:32:07 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:07 ready send heart to 0
+2026/04/08 21:32:07 ready send heart to 2
+2026/04/08 21:32:07 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:07 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:07 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 响应成功
+2026/04/08 21:32:07 响应成功
+2026/04/08 21:32:07 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:07 ready send heart to 0
+2026/04/08 21:32:07 ready send heart to 2
+2026/04/08 21:32:07 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:07 ready send heart to 0
+2026/04/08 21:32:07 ready send heart to 2
+2026/04/08 21:32:07 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:07 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:07 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 响应成功
+2026/04/08 21:32:07 响应成功
+2026/04/08 21:32:07 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:07 ready send heart to 0
+2026/04/08 21:32:07 ready send heart to 2
+2026/04/08 21:32:07 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:07 ready send heart to 0
+2026/04/08 21:32:07 ready send heart to 2
+2026/04/08 21:32:07 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:07 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:07 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 响应成功
+2026/04/08 21:32:07 响应成功
+2026/04/08 21:32:07 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:07 ready send heart to 0
+2026/04/08 21:32:07 ready send heart to 2
+2026/04/08 21:32:07 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:07 ready send heart to 0
+2026/04/08 21:32:07 ready send heart to 2
+2026/04/08 21:32:07 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:07 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:07 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 响应成功
+2026/04/08 21:32:07 响应成功
+2026/04/08 21:32:07 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:07 ready send heart to 0
+2026/04/08 21:32:07 ready send heart to 2
+2026/04/08 21:32:07 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:07 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:08 ready send heart to 0
+2026/04/08 21:32:08 ready send heart to 2
+2026/04/08 21:32:08 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:08 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:08 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 响应成功
+2026/04/08 21:32:08 响应成功
+2026/04/08 21:32:08 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:08 ready send heart to 0
+2026/04/08 21:32:08 ready send heart to 2
+2026/04/08 21:32:08 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:08 ready send heart to 0
+2026/04/08 21:32:08 ready send heart to 2
+2026/04/08 21:32:08 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:08 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:08 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 响应成功
+2026/04/08 21:32:08 响应成功
+2026/04/08 21:32:08 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:08 ready send heart to 0
+2026/04/08 21:32:08 ready send heart to 2
+2026/04/08 21:32:08 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:08 ready send heart to 0
+2026/04/08 21:32:08 ready send heart to 2
+2026/04/08 21:32:08 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:08 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:08 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 响应成功
+2026/04/08 21:32:08 响应成功
+2026/04/08 21:32:08 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:08 ready send heart to 0
+2026/04/08 21:32:08 ready send heart to 2
+2026/04/08 21:32:08 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:08 ready send heart to 0
+2026/04/08 21:32:08 ready send heart to 2
+2026/04/08 21:32:08 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:08 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:08 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 响应成功
+2026/04/08 21:32:08 响应成功
+2026/04/08 21:32:08 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:08 ready send heart to 0
+2026/04/08 21:32:08 ready send heart to 2
+2026/04/08 21:32:08 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:08 ready send heart to 0
+2026/04/08 21:32:08 ready send heart to 2
+2026/04/08 21:32:08 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:08 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:08 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 响应成功
+2026/04/08 21:32:08 响应成功
+2026/04/08 21:32:08 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:08 ready send heart to 0
+2026/04/08 21:32:08 ready send heart to 2
+2026/04/08 21:32:08 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:08 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:09 ready send heart to 0
+2026/04/08 21:32:09 ready send heart to 2
+2026/04/08 21:32:09 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:09 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:09 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 响应成功
+2026/04/08 21:32:09 响应成功
+2026/04/08 21:32:09 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:09 ready send heart to 0
+2026/04/08 21:32:09 ready send heart to 2
+2026/04/08 21:32:09 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:09 ready send heart to 0
+2026/04/08 21:32:09 ready send heart to 2
+2026/04/08 21:32:09 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:09 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:09 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 响应成功
+2026/04/08 21:32:09 响应成功
+2026/04/08 21:32:09 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:09 ready send heart to 0
+2026/04/08 21:32:09 ready send heart to 2
+2026/04/08 21:32:09 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:09 ready send heart to 0
+2026/04/08 21:32:09 ready send heart to 2
+2026/04/08 21:32:09 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:09 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:09 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 响应成功
+2026/04/08 21:32:09 响应成功
+2026/04/08 21:32:09 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:09 ready send heart to 0
+2026/04/08 21:32:09 ready send heart to 2
+2026/04/08 21:32:09 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:09 ready send heart to 0
+2026/04/08 21:32:09 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:09 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 ready send heart to 2
+2026/04/08 21:32:09 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:09 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 响应成功
+2026/04/08 21:32:09 响应成功
+2026/04/08 21:32:09 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:09 ready send heart to 0
+2026/04/08 21:32:09 ready send heart to 2
+2026/04/08 21:32:09 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:09 ready send heart to 0
+2026/04/08 21:32:09 ready send heart to 2
+2026/04/08 21:32:09 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:09 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:09 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 响应成功
+2026/04/08 21:32:09 响应成功
+2026/04/08 21:32:09 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:09 ready send heart to 0
+2026/04/08 21:32:09 ready send heart to 2
+2026/04/08 21:32:09 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:09 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:10 ready send heart to 0
+2026/04/08 21:32:10 ready send heart to 2
+2026/04/08 21:32:10 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:10 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:10 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 响应成功
+2026/04/08 21:32:10 响应成功
+2026/04/08 21:32:10 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:10 ready send heart to 0
+2026/04/08 21:32:10 ready send heart to 2
+2026/04/08 21:32:10 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:10 ready send heart to 0
+2026/04/08 21:32:10 ready send heart to 2
+2026/04/08 21:32:10 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:10 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:10 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 响应成功
+2026/04/08 21:32:10 响应成功
+2026/04/08 21:32:10 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:10 ready send heart to 0
+2026/04/08 21:32:10 ready send heart to 2
+2026/04/08 21:32:10 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:10 ready send heart to 0
+2026/04/08 21:32:10 ready send heart to 2
+2026/04/08 21:32:10 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:10 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:10 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 响应成功
+2026/04/08 21:32:10 响应成功
+2026/04/08 21:32:10 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:10 ready send heart to 0
+2026/04/08 21:32:10 ready send heart to 2
+2026/04/08 21:32:10 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:10 ready send heart to 0
+2026/04/08 21:32:10 ready send heart to 2
+2026/04/08 21:32:10 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:10 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:10 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 响应成功
+2026/04/08 21:32:10 响应成功
+2026/04/08 21:32:10 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:10 ready send heart to 0
+2026/04/08 21:32:10 ready send heart to 2
+2026/04/08 21:32:10 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:10 ready send heart to 0
+2026/04/08 21:32:10 ready send heart to 2
+2026/04/08 21:32:10 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:10 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:10 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 响应成功
+2026/04/08 21:32:10 响应成功
+2026/04/08 21:32:10 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:10 ready send heart to 0
+2026/04/08 21:32:10 ready send heart to 2
+2026/04/08 21:32:10 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:10 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:11 ready send heart to 0
+2026/04/08 21:32:11 ready send heart to 2
+2026/04/08 21:32:11 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:11 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:11 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 响应成功
+2026/04/08 21:32:11 响应成功
+2026/04/08 21:32:11 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:11 ready send heart to 0
+2026/04/08 21:32:11 ready send heart to 2
+2026/04/08 21:32:11 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:11 ready send heart to 0
+2026/04/08 21:32:11 ready send heart to 2
+2026/04/08 21:32:11 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:11 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:11 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 响应成功
+2026/04/08 21:32:11 响应成功
+2026/04/08 21:32:11 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:11 ready send heart to 0
+2026/04/08 21:32:11 ready send heart to 2
+2026/04/08 21:32:11 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:11 ready send heart to 0
+2026/04/08 21:32:11 ready send heart to 2
+2026/04/08 21:32:11 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:11 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:11 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 响应成功
+2026/04/08 21:32:11 响应成功
+2026/04/08 21:32:11 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:11 ready send heart to 0
+2026/04/08 21:32:11 ready send heart to 2
+2026/04/08 21:32:11 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:11 ready send heart to 0
+2026/04/08 21:32:11 ready send heart to 2
+2026/04/08 21:32:11 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:11 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:11 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 响应成功
+2026/04/08 21:32:11 响应成功
+2026/04/08 21:32:11 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:11 ready send heart to 0
+2026/04/08 21:32:11 ready send heart to 2
+2026/04/08 21:32:11 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:11 ready send heart to 0
+2026/04/08 21:32:11 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:11 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 ready send heart to 2
+2026/04/08 21:32:11 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:11 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 响应成功
+2026/04/08 21:32:11 响应成功
+2026/04/08 21:32:11 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:11 ready send heart to 0
+2026/04/08 21:32:11 ready send heart to 2
+2026/04/08 21:32:11 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:11 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:12 ready send heart to 0
+2026/04/08 21:32:12 ready send heart to 2
+2026/04/08 21:32:12 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:12 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:12 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 响应成功
+2026/04/08 21:32:12 响应成功
+2026/04/08 21:32:12 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:12 ready send heart to 0
+2026/04/08 21:32:12 ready send heart to 2
+2026/04/08 21:32:12 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:12 ready send heart to 0
+2026/04/08 21:32:12 ready send heart to 2
+2026/04/08 21:32:12 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:12 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:12 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 响应成功
+2026/04/08 21:32:12 响应成功
+2026/04/08 21:32:12 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:12 ready send heart to 0
+2026/04/08 21:32:12 ready send heart to 2
+2026/04/08 21:32:12 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:12 ready send heart to 0
+2026/04/08 21:32:12 ready send heart to 2
+2026/04/08 21:32:12 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:12 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:12 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 响应成功
+2026/04/08 21:32:12 响应成功
+2026/04/08 21:32:12 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:12 ready send heart to 0
+2026/04/08 21:32:12 ready send heart to 2
+2026/04/08 21:32:12 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:12 ready send heart to 0
+2026/04/08 21:32:12 ready send heart to 2
+2026/04/08 21:32:12 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:12 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:12 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 响应成功
+2026/04/08 21:32:12 响应成功
+2026/04/08 21:32:12 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:12 ready send heart to 0
+2026/04/08 21:32:12 ready send heart to 2
+2026/04/08 21:32:12 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:12 ready send heart to 0
+2026/04/08 21:32:12 ready send heart to 2
+2026/04/08 21:32:12 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:12 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:12 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:12 响应成功
+2026/04/08 21:32:12 响应成功
+2026/04/08 21:32:13 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:13 ready send heart to 0
+2026/04/08 21:32:13 ready send heart to 2
+2026/04/08 21:32:13 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:13 ready send heart to 0
+2026/04/08 21:32:13 ready send heart to 2
+2026/04/08 21:32:13 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:13 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:13 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 响应成功
+2026/04/08 21:32:13 响应成功
+2026/04/08 21:32:13 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:13 ready send heart to 0
+2026/04/08 21:32:13 ready send heart to 2
+2026/04/08 21:32:13 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:13 ready send heart to 0
+2026/04/08 21:32:13 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:13 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 ready send heart to 2
+2026/04/08 21:32:13 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:13 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 响应成功
+2026/04/08 21:32:13 响应成功
+2026/04/08 21:32:13 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:13 ready send heart to 0
+2026/04/08 21:32:13 ready send heart to 2
+2026/04/08 21:32:13 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:13 ready send heart to 0
+2026/04/08 21:32:13 ready send heart to 2
+2026/04/08 21:32:13 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:13 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:13 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 响应成功
+2026/04/08 21:32:13 响应成功
+2026/04/08 21:32:13 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:13 ready send heart to 0
+2026/04/08 21:32:13 ready send heart to 2
+2026/04/08 21:32:13 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:13 ready send heart to 0
+2026/04/08 21:32:13 ready send heart to 2
+2026/04/08 21:32:13 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:13 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:13 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 响应成功
+2026/04/08 21:32:13 响应成功
+2026/04/08 21:32:13 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:13 ready send heart to 0
+2026/04/08 21:32:13 ready send heart to 2
+2026/04/08 21:32:13 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:13 ready send heart to 0
+2026/04/08 21:32:13 ready send heart to 2
+2026/04/08 21:32:13 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:13 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:13 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:13 响应成功
+2026/04/08 21:32:13 响应成功
+2026/04/08 21:32:14 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:14 ready send heart to 0
+2026/04/08 21:32:14 ready send heart to 2
+2026/04/08 21:32:14 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:14 ready send heart to 0
+2026/04/08 21:32:14 ready send heart to 2
+2026/04/08 21:32:14 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:14 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:14 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 响应成功
+2026/04/08 21:32:14 响应成功
+2026/04/08 21:32:14 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:14 ready send heart to 0
+2026/04/08 21:32:14 ready send heart to 2
+2026/04/08 21:32:14 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:14 ready send heart to 0
+2026/04/08 21:32:14 ready send heart to 2
+2026/04/08 21:32:14 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:14 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:14 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 响应成功
+2026/04/08 21:32:14 响应成功
+2026/04/08 21:32:14 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:14 ready send heart to 0
+2026/04/08 21:32:14 ready send heart to 2
+2026/04/08 21:32:14 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:14 ready send heart to 0
+2026/04/08 21:32:14 ready send heart to 2
+2026/04/08 21:32:14 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:14 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:14 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 响应成功
+2026/04/08 21:32:14 响应成功
+2026/04/08 21:32:14 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:14 ready send heart to 0
+2026/04/08 21:32:14 ready send heart to 2
+2026/04/08 21:32:14 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:14 ready send heart to 0
+2026/04/08 21:32:14 ready send heart to 2
+2026/04/08 21:32:14 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:14 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:14 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 响应成功
+2026/04/08 21:32:14 响应成功
+2026/04/08 21:32:14 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:14 ready send heart to 0
+2026/04/08 21:32:14 ready send heart to 2
+2026/04/08 21:32:14 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:14 ready send heart to 0
+2026/04/08 21:32:14 ready send heart to 2
+2026/04/08 21:32:14 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:14 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:14 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:14 响应成功
+2026/04/08 21:32:14 响应成功
+2026/04/08 21:32:15 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:15 ready send heart to 0
+2026/04/08 21:32:15 ready send heart to 2
+2026/04/08 21:32:15 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:15 ready send heart to 0
+2026/04/08 21:32:15 ready send heart to 2
+2026/04/08 21:32:15 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:15 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:15 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 响应成功
+2026/04/08 21:32:15 响应成功
+2026/04/08 21:32:15 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:15 ready send heart to 0
+2026/04/08 21:32:15 ready send heart to 2
+2026/04/08 21:32:15 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:15 ready send heart to 0
+2026/04/08 21:32:15 ready send heart to 2
+2026/04/08 21:32:15 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:15 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:15 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 响应成功
+2026/04/08 21:32:15 响应成功
+2026/04/08 21:32:15 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:15 ready send heart to 0
+2026/04/08 21:32:15 ready send heart to 2
+2026/04/08 21:32:15 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:15 ready send heart to 0
+2026/04/08 21:32:15 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:15 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 ready send heart to 2
+2026/04/08 21:32:15 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:15 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 响应成功
+2026/04/08 21:32:15 响应成功
+2026/04/08 21:32:15 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:15 ready send heart to 0
+2026/04/08 21:32:15 ready send heart to 2
+2026/04/08 21:32:15 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:15 ready send heart to 0
+2026/04/08 21:32:15 ready send heart to 2
+2026/04/08 21:32:15 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:15 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:15 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 响应成功
+2026/04/08 21:32:15 响应成功
+2026/04/08 21:32:15 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:15 ready send heart to 0
+2026/04/08 21:32:15 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 ready send heart to 2
+2026/04/08 21:32:15 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:15 ready send heart to 0
+2026/04/08 21:32:15 ready send heart to 2
+2026/04/08 21:32:15 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:15 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:15 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:15 响应成功
+2026/04/08 21:32:15 响应成功
+2026/04/08 21:32:16 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:16 ready send heart to 0
+2026/04/08 21:32:16 ready send heart to 2
+2026/04/08 21:32:16 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:16 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:16 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:16 ready send heart to 0
+2026/04/08 21:32:16 ready send heart to 2
+2026/04/08 21:32:16 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:16 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:16 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:16 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:16 响应成功
+2026/04/08 21:32:16 响应成功
+2026/04/08 21:32:16 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:16 ready send heart to 0
+2026/04/08 21:32:16 ready send heart to 2
+2026/04/08 21:32:16 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:16 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:16 2 has become leader,ready to send heart to else nodes
+2026/04/08 21:32:16 ready send heart to 0
+2026/04/08 21:32:16 ready send heart to 2
+2026/04/08 21:32:16 success: 2 is a leader, ready sending heartbeart to follower 2....
+2026/04/08 21:32:16 server addr is :127.0.0.1:8003,own addr is :127.0.0.1:8002
+2026/04/08 21:32:16 success: 2 is a leader, ready sending heartbeart to follower 0....
+2026/04/08 21:32:16 server addr is :127.0.0.1:8001,own addr is :127.0.0.1:8002
+2026/04/08 21:32:16 响应成功
+2026/04/08 21:32:16 响应成功

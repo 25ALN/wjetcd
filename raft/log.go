@@ -17,8 +17,9 @@ type Log struct {
 func NewLog() *Log {
 	return &Log{
 		Entries:       make([]Entry, 0),
-		FirstLogIndex: 1,
-		LastLogIndex:  0,
+		FirstLogIndex: 0,
+		//LastLogIndex:  0,
+		LastLogIndex: -1,
 	}
 }
 func (log *Log) getRealIndex(index int) int {
@@ -26,7 +27,11 @@ func (log *Log) getRealIndex(index int) int {
 }
 func (log *Log) getOneEntry(index int) *Entry {
 
-	return &log.Entries[log.getRealIndex(index)]
+	realIdx := log.getRealIndex(index)
+	if realIdx < 0 || realIdx >= len(log.Entries) {
+		return nil
+	}
+	return &log.Entries[realIdx]
 }
 
 func (log *Log) appendL(newEntries ...Entry) {
@@ -36,9 +41,27 @@ func (log *Log) appendL(newEntries ...Entry) {
 }
 
 // 这是按照相对FirstLogIndex的偏移量来取日志的
+//
+//	func (log *Log) getAppendEntries(start int) []Entry {
+//		ret := append([]Entry{}, log.Entries[log.getRealIndex(start):log.getRealIndex(log.LastLogIndex)+1]...)
+//		return ret
+//	}
 func (log *Log) getAppendEntries(start int) []Entry {
-	ret := append([]Entry{}, log.Entries[log.getRealIndex(start):log.getRealIndex(log.LastLogIndex)+1]...)
-	return ret
+	startIdx := log.getRealIndex(start)
+	endIdx := log.getRealIndex(log.LastLogIndex)
+
+	// 防御性检查（非常关键）
+	if startIdx < 0 {
+		startIdx = 0
+	}
+	if endIdx >= len(log.Entries) {
+		endIdx = len(log.Entries) - 1
+	}
+	if startIdx > endIdx {
+		return nil
+	}
+
+	return append([]Entry{}, log.Entries[startIdx:endIdx+1]...)
 }
 func (log *Log) String() string {
 	if log.empty() {
@@ -59,9 +82,8 @@ func (rf *Raft) getEntryTerm(index int) int {
 	if index == rf.log.FirstLogIndex-1 {
 		return rf.snapshotLastIncludeTerm
 	}
-	if rf.log.FirstLogIndex <= rf.log.LastLogIndex {
-		return rf.log.getOneEntry(index).Term
+	if index < rf.log.FirstLogIndex || index > rf.log.LastLogIndex {
+		return -1
 	}
-
-	return -1
+	return rf.log.getOneEntry(index).Term
 }

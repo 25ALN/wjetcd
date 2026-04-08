@@ -1,6 +1,9 @@
 package raft
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+)
 
 // the service says it has created a snapshot that has
 // all info up to and including index. this means the
@@ -49,13 +52,12 @@ func (rf *Raft) Snapshot(index int, snapshot []byte) {
 func (rf *Raft) RequestInstallSnapshot(args *RequestInstallSnapShotArgs, reply *RequestInstallSnapShotReply) {
 	rf.Mu.Lock()
 	defer rf.Mu.Unlock()
-	//defer DPrintf(11, "%v: RequestInstallSnapshot end  args.LeaderId=%v, args.LastIncludeIndex=%v, args.LastIncludeTerm=%v\n", rf.SayMeL(), args.LeaderId, args.LastIncludeIndex, args.LastIncludeTerm)
-	DPrintf(111, "%v: receiving snapshot from LeaderId=%v with args.LastIncludeIndex=%v, args.LastIncludeTerm=%v\n", rf.SayMeL(), args.LeaderId, args.LastIncludeIndex, args.LastIncludeTerm)
 	reply.Term = rf.CurrentTerm
 	if args.Term < rf.CurrentTerm {
 		DPrintf(111, "%v: refusing snapshot from leader %d 's snapshot request since its term is %d", rf.SayMeL(), args.LeaderId, args.Term)
 		return
 	}
+	log.Printf("%v: receiving snapshot from LeaderId=%v with args.LastIncludeIndex=%v, args.LastIncludeTerm=%v\n", rf.SayMeL(), args.LeaderId, args.LastIncludeIndex, args.LastIncludeTerm)
 	rf.State = Follower
 	rf.resetElectionTimer()
 	if args.Term > rf.CurrentTerm {
@@ -132,6 +134,7 @@ func (rf *Raft) InstallSnapshot(serverId int) {
 		return
 	}
 	if reply.Term > rf.CurrentTerm {
+		log.Printf("节点任期更大,即将变为follower(snapshot)")
 		rf.votedFor = -1
 		rf.State = Follower
 		rf.CurrentTerm = reply.Term
