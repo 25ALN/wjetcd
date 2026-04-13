@@ -62,6 +62,7 @@ func NewApplyHelper(applyCh chan ApplyMsg, lastApplied int) *ApplyHelper {
 	go applyHelper.applier()
 	return applyHelper
 }
+
 func (applyHelper *ApplyHelper) Kill() {
 	atomic.StoreInt32(&applyHelper.dead, 1)
 }
@@ -72,16 +73,22 @@ func (applyHelper *ApplyHelper) killed() bool {
 func (applyHelper *ApplyHelper) applier() {
 	for !applyHelper.killed() {
 		applyHelper.mu.Lock()
-		if len(applyHelper.q) == 0 {
+		// if len(applyHelper.q) == 0 {
+		// 	applyHelper.cond.Wait()
+		// }
+		for len(applyHelper.q) == 0 && !applyHelper.killed() {
 			applyHelper.cond.Wait()
+		}
+		if applyHelper.killed() {
+			applyHelper.mu.Unlock()
+			return
 		}
 		msg := applyHelper.q[0]
 		applyHelper.q = applyHelper.q[1:]
 		applyHelper.mu.Unlock()
-		DPrintf(8000, "applyhelper start apply msg index=%v", ifCond(msg.CommandValid, msg.CommandIndex, msg.SnapshotIndex))
+		log.Printf("applyhepler start apply msg index=%v", ifCond(msg.CommandValid, msg.CommandIndex, msg.SnapshotIndex))
 		applyHelper.applyCh <- msg
 		//<-applyHelper.applyCh
-		DPrintf(8000, "applyhelper done apply msg index=%v with log entry： %v", ifCond(msg.CommandValid, msg.CommandIndex, msg.SnapshotIndex), msg.Command)
 	}
 }
 func (applyHelper *ApplyHelper) tryApply(msg *ApplyMsg) bool {

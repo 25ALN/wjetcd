@@ -1,6 +1,8 @@
-2026/04/08 21:31:57 Node 1 starting...
-2026/04/08 21:31:57 RaftAddr: 127.0.0.1:8001
-2026/04/08 21:31:57 Peers: [127.0.0.1:8001 127.0.0.1:8002 127.0.0.1:8003]
-2026/04/08 21:31:57 initialize the raft node become follower
-2026/04/08 21:31:58 success: 投出同意票给节点2
-Node 1 is not the leader
+2026/04/13 21:14:37 Node 1 starting...
+2026/04/13 21:14:37 RaftAddr: 127.0.0.1:8001
+2026/04/13 21:14:37 Peers: [127.0.0.1:8001 127.0.0.1:8002 127.0.0.1:8003]
+2026/04/13 21:14:37 initialize the raft node become follower
+2026/04/13 21:14:37 enter the sendMsgToTester
+2026/04/13 21:14:37 success: it is being blocked...
+2026/04/13 21:14:39 success: 投出同意票给节点2
+2026/04/13 21:14:40 key is foo,value is bar

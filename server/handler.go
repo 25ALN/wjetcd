@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"testetcd/kv"
 )
@@ -106,7 +107,7 @@ func (h *HTTPHandler) Put(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"ok":false,"error":"key and value required"}`)
 		return
 	}
-
+	log.Printf("key is %s,value is %s", key, value)
 	cmd := kv.Command{
 		Type:  kv.CmdPut,
 		Key:   key,

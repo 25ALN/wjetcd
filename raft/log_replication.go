@@ -122,22 +122,27 @@ func (rf *Raft) HandleAppendEntriesRPC(args *RequestAppendEntriesArgs, reply *Re
 func (rf *Raft) tryCommitL(matchIndex int) {
 	if matchIndex <= rf.CommitIndex {
 		// 首先matchIndex应该是大于leader节点的commitIndex才能提交，因为commitIndex及其之前的不需要更新
+		log.Printf("matchIndex %d is lower than current commitIndex %d", matchIndex, rf.CommitIndex)
 		return
 	}
 	// 越界的也不能提交
 	if matchIndex > rf.log.LastLogIndex {
+		log.Printf("matchIndex %d is greater than log lastlogindex %d", matchIndex, rf.log.LastLogIndex)
 		return
 	}
 	if matchIndex < rf.log.FirstLogIndex {
+		log.Printf("matchIndex %d is lower than log firstlogindex %d", matchIndex, rf.log.FirstLogIndex)
 		return
 	}
 	// 提交的必须本任期内从客户端收到的日志
 	if rf.getEntryTerm(matchIndex) != rf.CurrentTerm {
+		log.Printf("commit log term %d is not current term %d", rf.getEntryTerm(matchIndex), rf.CurrentTerm)
 		return
 	}
 
 	// 计算所有已经正确匹配该matchIndex的从节点的票数
 	cnt := 1 //自动计算上leader节点的一票
+	log.Printf("trycommit me is %d", rf.me)
 	for i := 0; i < len(rf.peers); i++ {
 		if i == rf.me {
 			continue
@@ -148,18 +153,16 @@ func (rf *Raft) tryCommitL(matchIndex int) {
 			cnt++
 		}
 	}
-	//DPrintf(2, "%v: rf.commitIndex = %v ,trycommitindex=%v,matchindex=%v cnt=%v", rf.SayMeL(), rf.commitIndex, index, rf.matchIndex, cnt)
-	// 超过半数就提交
 	if cnt > len(rf.peers)/2 {
 		rf.CommitIndex = matchIndex
 		if rf.CommitIndex > rf.log.LastLogIndex {
-			DPrintf(999, "%v: commitIndex > lastlogindex %v > %v", rf.SayMeL(), rf.CommitIndex, rf.log.LastLogIndex)
+			log.Printf("%v: commitIndex > lastlogindex %v > %v", rf.SayMeL(), rf.CommitIndex, rf.log.LastLogIndex)
 			panic("")
 		}
 		// DPrintf(500, "%v: commitIndex = %v ,entries=%v", rf.SayMeL(), rf.CommitIndex, rf.log.Entries)
-		DPrintf(199, "%v: 主结点已经提交了index为%d的日志，rf.applyCond.Broadcast(),rf.lastApplied=%v rf.commitIndex=%v", rf.SayMeL(), rf.CommitIndex, rf.LastApplied, rf.CommitIndex)
+		log.Printf("%v: 主结点已经提交了index为%d的日志，rf.applyCond.Broadcast(),rf.lastApplied=%v rf.commitIndex=%v", rf.SayMeL(), rf.CommitIndex, rf.LastApplied, rf.CommitIndex)
 		rf.applyCond.Broadcast() // 通知对应的applier协程将日志放到状态机上验证
 	} else {
-		DPrintf(199, "\n%v: 未超过半数节点在此索引上的日志相等，拒绝提交....\n", rf.SayMeL())
+		log.Printf("\n%v: 未超过半数节点在此索引上的日志相等，拒绝提交....\n", rf.SayMeL())
 	}
 }

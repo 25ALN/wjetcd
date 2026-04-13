@@ -267,11 +267,11 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	}
 	index = rf.log.LastLogIndex + 1
 	// 开始发送AppendEntries rpc
-	DPrintf(100, "%v: a command index=%v cmd=%T %v come", rf.SayMeL(), index, command, command)
+	log.Printf("%v: a command index=%v cmd=%T %v come", rf.SayMeL(), index, command, command)
 	rf.log.appendL(Entry{term, command})
 	rf.persist()
 	rf.resetTrackedIndex()
-	DPrintf(101, "%v: check the newly added log index：%d", rf.SayMeL(), rf.log.LastLogIndex)
+	log.Printf("%v: check the newly added log index：%d", rf.SayMeL(), rf.log.LastLogIndex)
 	go rf.StartAppendEntries(false)
 
 	return index, term, isLeader
@@ -398,19 +398,19 @@ func (rf *Raft) AppendEntries(targetServerId int, heart bool) {
 		}
 		args.PrevLogIndex = min(rf.log.LastLogIndex, rf.peerTrackers[targetServerId].nextIndex-1)
 		if args.PrevLogIndex+1 < rf.log.FirstLogIndex {
-			DPrintf(111, "%v: 节点%d日志匹配索引为%d更新速度太慢，准备发送快照", rf.SayMeL(), targetServerId, args.PrevLogIndex)
+			log.Printf("%v: 节点%d日志匹配索引为%d更新速度太慢，准备发送快照", rf.SayMeL(), targetServerId, args.PrevLogIndex)
 			go rf.InstallSnapshot(targetServerId)
 			rf.Mu.Unlock()
 			return
 		} else {
-			DPrintf(111, "%v: 节点%d日志匹配索引为%d，准备日志复制", rf.SayMeL(), targetServerId, args.PrevLogIndex)
+			log.Printf("%v: 节点%d日志匹配索引为%d，准备日志复制", rf.SayMeL(), targetServerId, args.PrevLogIndex)
 		}
 		args.LeaderTerm = rf.CurrentTerm
 		args.LeaderId = rf.me
 		args.LeaderCommit = rf.CommitIndex
 		args.PrevLogTerm = rf.getEntryTerm(args.PrevLogIndex)
 		args.Entries = rf.log.getAppendEntries(args.PrevLogIndex + 1)
-		DPrintf(111, "%v: the len of log entries: %d is ready to send to node %d!!! and the entries are %v\n",
+		log.Printf("%v: the len of log entries: %d is ready to send to node %d!!! and the entries are %v\n",
 			rf.SayMeL(), len(args.Entries), targetServerId, args.Entries)
 		rf.Mu.Unlock()
 
@@ -444,15 +444,15 @@ func (rf *Raft) AppendEntries(targetServerId int, heart bool) {
 		DPrintf(111, "%v: get append reply reply.PrevLogIndex=%v reply.PrevLogTerm=%v reply.Success=%v heart=%v\n", rf.SayMeL(), reply.PrevLogIndex, reply.PrevLogTerm, reply.Success, heart)
 
 		if reply.Success {
+			log.Printf("targetserverid is %d,myself is %d", targetServerId, rf.me)
 			rf.peerTrackers[targetServerId].nextIndex = args.PrevLogIndex + len(args.Entries) + 1
 			rf.peerTrackers[targetServerId].matchIndex = args.PrevLogIndex + len(args.Entries)
-			DPrintf(111, "%v: 更新节点%d的日志成功，nextIndex更新为%d, matchIndex更新为%d, 准备尝试一次提交日志...\n", rf.SayMeL(), targetServerId, rf.peerTrackers[targetServerId].nextIndex,
+			log.Printf("%v: 更新节点%d的日志成功，nextIndex更新为%d, matchIndex更新为%d, 准备尝试一次提交日志...\n", rf.SayMeL(), targetServerId, rf.peerTrackers[targetServerId].nextIndex,
 				rf.peerTrackers[targetServerId].matchIndex)
 			rf.tryCommitL(rf.peerTrackers[targetServerId].matchIndex)
 			return
 		} else {
 			DPrintf(111, "%v: 更新节点%d的日志失败，继续缩减 PrevLogIndex %d...\n", rf.SayMeL(), targetServerId, reply.PrevLogIndex)
-
 		}
 
 		//reply.Success is false
@@ -492,157 +492,6 @@ func (rf *Raft) AppendEntries(targetServerId int, heart bool) {
 	}
 }
 
-// nextIndex收敛速度优化：nextIndex跳跃算法，需搭配HandleAppendEntriesRPC2方法使用
-func (rf *Raft) AppendEntries2(targetServerId int, heart bool) {
-
-	if heart {
-		reply := RequestAppendEntriesReply{}
-		args := RequestAppendEntriesArgs{}
-		rf.Mu.Lock()
-		if rf.State != Leader {
-			rf.Mu.Unlock()
-			return
-		}
-		args.LeaderTerm = rf.CurrentTerm
-		DPrintf(111, "\n %v: %d is a leader, ready sending heartbeart to follower %d....", rf.SayMeL(), rf.me, targetServerId)
-		rf.Mu.Unlock()
-
-		ok := rf.sendRequestAppendEntries(true, targetServerId, &args, &reply)
-
-		rf.Mu.Lock()
-		if !ok {
-			// rpc通信失败就返回
-			rf.Mu.Unlock()
-			return
-		}
-		if rf.State != Leader {
-			rf.Mu.Unlock()
-			return
-		}
-		if reply.FollowerTerm < rf.CurrentTerm {
-			// 丢弃旧rpc的响应
-			rf.Mu.Unlock()
-			return
-		}
-		if reply.FollowerTerm > rf.CurrentTerm {
-			// 从节点任期比自己大就变为follower
-			rf.CurrentTerm = reply.FollowerTerm
-			rf.votedFor = None
-			log.Printf("节点任期更大,即将变为follower")
-			rf.State = Follower
-			// follower身份有改变需要持久化
-			rf.persist()
-			rf.Mu.Unlock()
-			return
-		}
-
-		// 响应成功则什么不用做
-		if reply.Success {
-			rf.Mu.Unlock()
-			return
-		}
-
-		rf.Mu.Unlock()
-		// 发送心跳包
-		return
-	} else {
-		args := RequestAppendEntriesArgs{}
-		reply := RequestAppendEntriesReply{}
-
-		rf.Mu.Lock()
-		if rf.State != Leader {
-			rf.Mu.Unlock()
-			return
-		}
-		args.PrevLogIndex = min(rf.log.LastLogIndex, rf.peerTrackers[targetServerId].nextIndex-1)
-		if args.PrevLogIndex+1 < rf.log.FirstLogIndex {
-			DPrintf(111, "此时 %d 节点的nextIndex为%d,LastLogIndex为 %d, 最后一项日志为：\n", rf.me, rf.peerTrackers[rf.me].nextIndex,
-				rf.log.LastLogIndex)
-			go rf.InstallSnapshot(targetServerId)
-			rf.Mu.Unlock()
-			return
-		}
-		args.LeaderTerm = rf.CurrentTerm
-		args.LeaderId = rf.me
-		args.LeaderCommit = rf.CommitIndex
-		args.PrevLogTerm = rf.getEntryTerm(args.PrevLogIndex)
-		args.Entries = rf.log.getAppendEntries(args.PrevLogIndex + 1)
-		DPrintf(111, "%v: the len of log entries: %d is ready to send to node %d!!! and the entries are %v\n",
-			rf.SayMeL(), len(args.Entries), targetServerId, args.Entries)
-		rf.Mu.Unlock()
-
-		//fmt.Printf("\n %d is a leader, ready sending log entries to follower %d with args leaderTerm:%d, PrevLogIndex: %d, PrevLogTerm:%d, lastEntry:%v....", rf.me, targetServerId, args.LeaderTerm, args.PrevLogIndex, args.PrevLogTerm, args.Entries[args.PrevLogIndex])
-		ok := rf.sendRequestAppendEntries(false, targetServerId, &args, &reply)
-
-		if !ok {
-			//DPrintf(111, "%v: cannot request AppendEntries to %v args.term=%v\n", rf.SayMeL(), targetServerId, args.LeaderTerm)
-			return
-		}
-
-		rf.Mu.Lock()
-		defer rf.Mu.Unlock()
-		if rf.State != Leader {
-			return
-		}
-		// 丢掉旧rpc响应
-		if reply.FollowerTerm < rf.CurrentTerm {
-			return
-		}
-		DPrintf(111, "%v: get reply from %v reply.Term=%v reply.Success=%v reply.PrevLogTerm=%v reply.PrevLogIndex=%v myinfo:rf.log.FirstLogIndex=%v rf.log.LastLogIndex=%v\n",
-			rf.SayMeL(), targetServerId, reply.FollowerTerm, reply.Success, reply.PrevLogTerm, reply.PrevLogIndex, rf.log.FirstLogIndex, rf.log.LastLogIndex)
-		if reply.FollowerTerm > rf.CurrentTerm {
-			log.Printf("will become follower")
-			rf.State = Follower
-			rf.votedFor = None
-			rf.CurrentTerm = reply.FollowerTerm
-			rf.persist()
-			return
-		}
-		DPrintf(111, "%v: get append reply reply.PrevLogIndex=%v reply.PrevLogTerm=%v reply.Success=%v heart=%v\n", rf.SayMeL(), reply.PrevLogIndex, reply.PrevLogTerm, reply.Success, heart)
-
-		if reply.Success {
-			rf.peerTrackers[targetServerId].nextIndex = args.PrevLogIndex + len(args.Entries) + 1
-			rf.peerTrackers[targetServerId].matchIndex = args.PrevLogIndex + len(args.Entries)
-			DPrintf(111, "success! now trying to commit the log...\n")
-			rf.tryCommitL(rf.peerTrackers[targetServerId].matchIndex)
-			return
-		}
-
-		if rf.log.empty() { //判掉为空的情况 方便后面讨论
-			go rf.InstallSnapshot(targetServerId)
-			return
-		}
-		if reply.PrevLogIndex+1 < rf.log.FirstLogIndex {
-			go rf.InstallSnapshot(targetServerId)
-
-			return
-		}
-		if reply.PrevLogIndex+1 < rf.log.FirstLogIndex {
-			go rf.InstallSnapshot(targetServerId)
-			return
-		} else if reply.PrevLogIndex > rf.log.LastLogIndex {
-			rf.peerTrackers[targetServerId].nextIndex = rf.log.LastLogIndex + 1
-		} else if rf.getEntryTerm(reply.PrevLogIndex) == reply.PrevLogTerm {
-			// 因为响应方面接收方做了优化，作为响应方的从节点可以直接跳到索引不匹配但是等于任期PrevLogTerm的第一个提交的日志记录
-			rf.peerTrackers[targetServerId].nextIndex = reply.PrevLogIndex + 1
-		} else {
-			// 此时rf.getEntryTerm(reply.PrevLogIndex) != reply.PrevLogTerm，也就是说此时索引相同位置上的日志提交时所处term都不同，
-			// 则此日志也必然是不同的，所以可以安排跳到前一个当前任期的第一个节点
-			PrevIndex := reply.PrevLogIndex
-			for PrevIndex >= rf.log.FirstLogIndex && rf.getEntryTerm(PrevIndex) == rf.getEntryTerm(reply.PrevLogIndex) {
-				PrevIndex--
-			}
-			if PrevIndex+1 < rf.log.FirstLogIndex {
-				if rf.log.FirstLogIndex > 1 {
-					go rf.InstallSnapshot(targetServerId)
-					return
-				}
-			}
-			rf.peerTrackers[targetServerId].nextIndex = PrevIndex + 1
-		}
-	}
-}
-
 func (rf *Raft) SayMeL() string {
 
 	//return fmt.Sprintf("[Server %v as %v at term %v with votedFor %d, FirstLogIndex %d, LastLogIndex %d, lastIncludedIndex %d, commitIndex %d, and lastApplied %d]： + \n",
@@ -654,16 +503,16 @@ func (rf *Raft) SayMeL() string {
 func (rf *Raft) sendMsgToTester() {
 	rf.Mu.Lock()
 	defer rf.Mu.Unlock()
+	log.Printf("enter the sendMsgToTester")
 	for !rf.killed() {
-		DPrintf(11, "%v: it is being blocked...", rf.SayMeL())
+		log.Printf("%v: it is being blocked...", rf.SayMeL())
 		rf.applyCond.Wait()
 
 		for rf.LastApplied+1 <= rf.CommitIndex {
 			i := rf.LastApplied + 1
 			rf.LastApplied++
 			if i < rf.log.FirstLogIndex {
-				DPrintf(11111, "BUG：The rf.commitIndex is %d, term is %d, lastLogIndex is %d, and the log is %v", rf.CommitIndex, rf.CurrentTerm, rf.log.LastLogIndex, rf.log.Entries)
-				DPrintf(11111, "%v: apply index=%v but rf.log.FirstLogIndex=%v rf.lastApplied=%v\n",
+				log.Printf("%v: apply index=%v but rf.log.FirstLogIndex=%v rf.lastApplied=%v\n",
 					rf.SayMeL(), i, rf.log.FirstLogIndex, rf.LastApplied)
 				panic("error happening")
 			}
@@ -672,7 +521,7 @@ func (rf *Raft) sendMsgToTester() {
 				Command:      rf.log.getOneEntry(i).Command,
 				CommandIndex: i,
 			}
-			DPrintf(111, "%s: next apply index=%v lastApplied=%v len entries=%v "+
+			log.Printf("%s: next apply index=%v lastApplied=%v len entries=%v "+
 				"LastLogIndex=%v cmd=%v\n", rf.SayMeL(), i, rf.LastApplied, len(rf.log.Entries),
 				rf.log.LastLogIndex, rf.log.getOneEntry(i).Command)
 			rf.ApplyHelper.tryApply(&msg)

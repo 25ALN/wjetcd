@@ -105,11 +105,11 @@ func (rf *Raft) InstallSnapshot(serverId int) {
 	reply := RequestInstallSnapShotReply{}
 	rf.Mu.Lock()
 	if rf.State != Leader {
-		DPrintf(111, "%v: 状态已变，不是leader节点，无法发送快照", rf.SayMeL())
+		log.Printf("%v: 状态已变，不是leader节点，无法发送快照", rf.SayMeL())
 		rf.Mu.Unlock()
 		return
 	}
-	DPrintf(111, "%v: 准备向节点%d发送快照", rf.SayMeL(), serverId)
+	log.Printf("%v: 准备向节点%d发送快照", rf.SayMeL(), serverId)
 	args.Term = rf.CurrentTerm
 	args.LeaderId = rf.me
 	args.LastIncludeIndex = rf.snapshotLastIncludeIndex
@@ -119,18 +119,18 @@ func (rf *Raft) InstallSnapshot(serverId int) {
 
 	ok := rf.sendRequestInstallSnapshot(serverId, &args, &reply)
 	if !ok {
-		//DPrintf(12, "%v: cannot sendRequestInstallSnapshot to  %v args.term=%v\n", rf.SayMeL(), serverId, args.Term)
+		log.Printf("%v: cannot sendRequestInstallSnapshot to  %v args.term=%v\n", rf.SayMeL(), serverId, args.Term)
 		return
 	}
 	rf.Mu.Lock()
 	defer rf.Mu.Unlock()
 
 	if rf.State != Leader {
-		DPrintf(111, "%v: 因为不是leader，放弃处理%d的快照响应", rf.SayMeL(), serverId)
+		log.Printf("%v: 因为不是leader，放弃处理%d的快照响应", rf.SayMeL(), serverId)
 		return
 	}
 	if reply.Term < rf.CurrentTerm {
-		DPrintf(111, "%v: 因为是旧的快照响应，放弃处理%d的快照响应, 旧响应的任期是%d", rf.SayMeL(), serverId, reply.Term)
+		log.Printf("%v: 因为是旧的快照响应，放弃处理%d的快照响应, 旧响应的任期是%d", rf.SayMeL(), serverId, reply.Term)
 		return
 	}
 	if reply.Term > rf.CurrentTerm {

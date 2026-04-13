@@ -14,14 +14,13 @@ import (
 )
 
 type Server struct {
-	mu      sync.Mutex
-	store   *kv.KVStore
-	rf      *raft.Raft
-	applyCh chan raft.ApplyMsg
-	id      int
-	addr    string
-	peers   []string
-	//peers    []*labrpc.ClientEnd
+	mu       sync.Mutex
+	store    *kv.KVStore
+	rf       *raft.Raft
+	applyCh  chan raft.ApplyMsg
+	id       int
+	addr     string
+	peers    []string
 	wal      *storage.WAL
 	snapshot *storage.Snapshot
 
@@ -83,7 +82,7 @@ func (s *Server) applyLoop() {
 		if !msg.CommandValid {
 			continue
 		}
-
+		log.Printf("APPLY idx=%d", msg.CommandIndex)
 		s.mu.Lock()
 		if cmd, ok := msg.Command.(kv.Command); ok {
 			log.Printf("ready to write logs into files")
@@ -112,32 +111,43 @@ func (s *Server) applyLoop() {
 }
 
 // 通知对应请求的响应通道
+// func (s *Server) notifyReply(cmdIdx int, result interface{}) {
+// 	s.mu.Lock()
+// 	defer s.mu.Unlock()
+
+//		if ch, ok := s.replyCh[cmdIdx]; ok {
+//			select {
+//			case ch <- result:
+//			default:
+//			}
+//			delete(s.replyCh, cmdIdx)
+//		}
+//	}
 func (s *Server) notifyReply(cmdIdx int, result interface{}) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	if ch, ok := s.replyCh[cmdIdx]; ok {
-		select {
-		case ch <- result:
-		default:
-		}
+		ch <- result
 		delete(s.replyCh, cmdIdx)
+		log.Printf("NOTIFY idx=%d exist=%v", cmdIdx, ok)
+
+	} else {
+		log.Printf(" replyCh not found for idx=%d (RESULT LOST!)", cmdIdx)
 	}
 }
 
 // 向Raft提交命令
 func (s *Server) Submit(cmd kv.Command) (string, error) {
 	s.mu.Lock()
-	// 检查是否是Leader
-	isLeader := s.IsLeader()
-	s.mu.Unlock()
-
-	if !isLeader {
-		fmt.Printf("Node %d is not the leader\n", s.id)
+	if !s.IsLeader() {
+		s.mu.Unlock()
 		return "", fmt.Errorf("not leader")
 	}
+	replyCh := make(chan interface{}, 1)
 
-	// 提交到Raft
+	// 先占位（index 还不知道 → 用临时方式）
+	s.mu.Unlock()
+
 	idx, term, ok := s.rf.Start(cmd)
 	if !ok {
 		return "", fmt.Errorf("submit failed")
@@ -145,23 +155,61 @@ func (s *Server) Submit(cmd kv.Command) (string, error) {
 
 	log.Printf("[Server %d] Submit command at index %d, term %d", s.id, idx, term)
 
-	// 创建响应通道
 	s.mu.Lock()
-	replyCh := make(chan interface{}, 1)
 	s.replyCh[idx] = replyCh
 	s.mu.Unlock()
 
-	// 等待应用完成（有超时）
 	select {
 	case result := <-replyCh:
 		return result.(string), nil
 	case <-time.After(5 * time.Second):
 		s.mu.Lock()
-		defer s.mu.Unlock()
 		delete(s.replyCh, idx)
+		s.mu.Unlock()
 		return "", fmt.Errorf("timeout")
 	}
 }
+
+// func (s *Server) Submit(cmd kv.Command) (string, error) {
+// 	s.mu.Lock()
+// 	// 检查是否是Leader
+// 	isLeader := s.IsLeader()
+// 	s.mu.Unlock()
+
+// 	if !isLeader {
+// 		fmt.Printf("Node %d is not the leader\n", s.id)
+// 		return "", fmt.Errorf("not leader")
+// 	}
+
+// 	// 提交到Raft
+// 	log.Printf("send message to raft is %s ,%s", cmd.Key, cmd.Value)
+// 	idx, term, ok := s.rf.Start(cmd)
+
+// 	log.Printf("idx is %d,term is %d,ok is %v", idx, term, ok)
+// 	if !ok {
+// 		return "", fmt.Errorf("submit failed")
+// 	}
+
+// 	log.Printf("[Server %d] Submit command at index %d, term %d", s.id, idx, term)
+
+// 	// 创建响应通道
+// 	s.mu.Lock()
+// 	replyCh := make(chan interface{}, 1)
+// 	s.replyCh[idx] = replyCh
+// 	s.mu.Unlock()
+
+// 	// 等待应用完成（有超时）
+// 	select {
+// 	case result := <-replyCh:
+// 		return result.(string), nil
+// 	case <-time.After(5 * time.Second):
+// 		s.mu.Lock()
+// 		defer s.mu.Unlock()
+// 		delete(s.replyCh, idx)
+// 		log.Printf("timeout ready to print error")
+// 		return "", fmt.Errorf("timeout")
+// 	}
+// }
 
 // 从本地存储读取（无需经过Raft）
 func (s *Server) Get(key string) string {
