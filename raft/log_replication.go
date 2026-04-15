@@ -120,8 +120,8 @@ func (rf *Raft) HandleAppendEntriesRPC(args *RequestAppendEntriesArgs, reply *Re
 
 // 主节点对日志进行提交，其条件是多余一半的从节点的commitIndex>=leader节点当前提交的commitIndex
 func (rf *Raft) tryCommitL(matchIndex int) {
-	if matchIndex <= rf.CommitIndex {
-		// 首先matchIndex应该是大于leader节点的commitIndex才能提交，因为commitIndex及其之前的不需要更新
+	if matchIndex < rf.CommitIndex {
+		// 首先matchIndex应该是大于等于leader节点的commitIndex才能提交，因为commitIndex之前的不需要更新
 		log.Printf("matchIndex %d is lower than current commitIndex %d", matchIndex, rf.CommitIndex)
 		return
 	}
@@ -139,12 +139,11 @@ func (rf *Raft) tryCommitL(matchIndex int) {
 		log.Printf("commit log term %d is not current term %d", rf.getEntryTerm(matchIndex), rf.CurrentTerm)
 		return
 	}
-
 	// 计算所有已经正确匹配该matchIndex的从节点的票数
 	cnt := 1 //自动计算上leader节点的一票
 	log.Printf("trycommit me is %d", rf.me)
 	for i := 0; i < len(rf.peers); i++ {
-		if i == rf.me {
+		if i == rf.me-1 {
 			continue
 		}
 		// 为什么只需要保证提交的matchIndex必须小于等于其他节点的matchIndex就可以认为这个节点在这个matchIndex记录上正确匹配呢？
@@ -159,7 +158,6 @@ func (rf *Raft) tryCommitL(matchIndex int) {
 			log.Printf("%v: commitIndex > lastlogindex %v > %v", rf.SayMeL(), rf.CommitIndex, rf.log.LastLogIndex)
 			panic("")
 		}
-		// DPrintf(500, "%v: commitIndex = %v ,entries=%v", rf.SayMeL(), rf.CommitIndex, rf.log.Entries)
 		log.Printf("%v: 主结点已经提交了index为%d的日志，rf.applyCond.Broadcast(),rf.lastApplied=%v rf.commitIndex=%v", rf.SayMeL(), rf.CommitIndex, rf.LastApplied, rf.CommitIndex)
 		rf.applyCond.Broadcast() // 通知对应的applier协程将日志放到状态机上验证
 	} else {

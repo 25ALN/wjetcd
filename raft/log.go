@@ -41,16 +41,21 @@ func (log *Log) appendL(newEntries ...Entry) {
 }
 
 // 这是按照相对FirstLogIndex的偏移量来取日志的
-//
-//	func (log *Log) getAppendEntries(start int) []Entry {
-//		ret := append([]Entry{}, log.Entries[log.getRealIndex(start):log.getRealIndex(log.LastLogIndex)+1]...)
-//		return ret
-//	}
+// func (log *Log) getAppendEntries(start int) []Entry {
+// 	ret := append([]Entry{}, log.Entries[log.getRealIndex(start):log.getRealIndex(log.LastLogIndex)+1]...)
+// 	return ret
+// }
+
 func (log *Log) getAppendEntries(start int) []Entry {
+	if log.FirstLogIndex > log.LastLogIndex {
+		return nil
+	}
+	if start > log.LastLogIndex {
+		return []Entry{}
+	}
 	startIdx := log.getRealIndex(start)
 	endIdx := log.getRealIndex(log.LastLogIndex)
 
-	// 防御性检查（非常关键）
 	if startIdx < 0 {
 		startIdx = 0
 	}
@@ -58,7 +63,7 @@ func (log *Log) getAppendEntries(start int) []Entry {
 		endIdx = len(log.Entries) - 1
 	}
 	if startIdx > endIdx {
-		return nil
+		return []Entry{}
 	}
 
 	return append([]Entry{}, log.Entries[startIdx:endIdx+1]...)
@@ -76,9 +81,6 @@ func (rf *Raft) GetLogEntries() []Entry {
 	return rf.log.Entries
 }
 func (rf *Raft) getEntryTerm(index int) int {
-	if index == 0 {
-		return 0
-	}
 	if index == rf.log.FirstLogIndex-1 {
 		return rf.snapshotLastIncludeTerm
 	}

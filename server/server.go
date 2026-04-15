@@ -84,6 +84,8 @@ func (s *Server) applyLoop() {
 		}
 		log.Printf("APPLY idx=%d", msg.CommandIndex)
 		s.mu.Lock()
+		var result string
+		var cmdIdx int
 		if cmd, ok := msg.Command.(kv.Command); ok {
 			log.Printf("ready to write logs into files")
 			if s.wal != nil {
@@ -93,13 +95,14 @@ func (s *Server) applyLoop() {
 					log.Printf("success save datas")
 				}
 			}
-			result, err := s.store.Apply(cmd)
-			if err != nil {
-				log.Printf("[Server %d] Apply error: %v", s.id, err)
-			}
-			s.notifyReply(msg.CommandIndex, result)
+			result, _ = s.store.Apply(cmd)
+			cmdIdx = msg.CommandIndex
 		}
 		s.mu.Unlock()
+
+		if cmdIdx >= 0 {
+			s.notifyReply(cmdIdx, result)
+		}
 
 		// 更新LastApplied
 		s.mu.Lock()
@@ -145,17 +148,14 @@ func (s *Server) Submit(cmd kv.Command) (string, error) {
 	}
 	replyCh := make(chan interface{}, 1)
 
-	// 先占位（index 还不知道 → 用临时方式）
-	s.mu.Unlock()
-
 	idx, term, ok := s.rf.Start(cmd)
 	if !ok {
+		s.mu.Unlock()
 		return "", fmt.Errorf("submit failed")
 	}
 
 	log.Printf("[Server %d] Submit command at index %d, term %d", s.id, idx, term)
 
-	s.mu.Lock()
 	s.replyCh[idx] = replyCh
 	s.mu.Unlock()
 

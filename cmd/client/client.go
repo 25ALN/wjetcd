@@ -42,7 +42,7 @@ func main() {
 			fmt.Println("get operation requires -key")
 			return
 		}
-		val, err := httpGet(baseURL, *key)
+		val, err := httpGet(addrlist, *key)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			return
@@ -94,31 +94,35 @@ func httpPut(addrs []string, key, value string) error {
 	return fmt.Errorf("all nodes failed (no leader?)")
 }
 
-func httpGet(baseURL, key string) (string, error) {
-	url := fmt.Sprintf("%s/get?key=%s", baseURL, key)
-	resp, err := http.Get(url)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("status %d: %s", resp.StatusCode, string(body))
-	}
-
-	body, _ := io.ReadAll(resp.Body)
-	// 简单的JSON解析，提取value字段
-	content := string(body)
-	idx := strings.Index(content, "\"value\":\"")
-	if idx >= 0 {
-		start := idx + 9
-		end := strings.Index(content[start:], "\"")
-		if end >= 0 {
-			return content[start : start+end], nil
+func httpGet(addrs []string, key string) (string, error) {
+	for _, addr := range addrs {
+		url := fmt.Sprintf("http://%s/get?key=%s", addr, key)
+		resp, err := http.Get(url)
+		if err != nil {
+			continue
 		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			continue
+		}
+
+		body, _ := io.ReadAll(resp.Body)
+		content := string(body)
+		idx := strings.Index(content, "\"value\":\"")
+		if idx >= 0 {
+			start := idx + 9
+			nextQuote := strings.Index(content[start:], "\"")
+			if nextQuote >= 0 {
+				val := content[start : start+nextQuote]
+				if len(val) > 0 {
+					return val, nil
+				}
+			}
+		}
+		continue
 	}
-	return "", nil
+	return "", fmt.Errorf("key not found")
 }
 
 func httpHealth(baseURL string) (string, error) {

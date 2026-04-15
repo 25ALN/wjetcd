@@ -498,8 +498,6 @@ func (cfg *config) nCommitted(index int) (int, interface{}) {
 	var cmd interface{} = nil // 一个用来记录在index上各个实例存储的相同的日志项
 	// 遍历raft实例
 	for i := 0; i < len(cfg.rafts); i++ {
-		//DPrintf(111, "%v: 检测是否捕捉到异常", cfg.rafts[i].SayMeL())
-		//DPrintf(111, "检测节点%d是否捕捉到异常:%v", i, cfg.applyErr[i])
 		if cfg.applyErr[i] != "" { // cfg.applyErr数组负责存储 ”捕捉错误的协程“ 收集到的错误，如果不空，则说明捕捉到异常
 			cfg.t.Fatal(cfg.applyErr[i])
 		}

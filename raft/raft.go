@@ -270,7 +270,6 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	log.Printf("%v: a command index=%v cmd=%T %v come", rf.SayMeL(), index, command, command)
 	rf.log.appendL(Entry{term, command})
 	rf.persist()
-	rf.resetTrackedIndex()
 	log.Printf("%v: check the newly added log index：%d", rf.SayMeL(), rf.log.LastLogIndex)
 	go rf.StartAppendEntries(false)
 
@@ -410,15 +409,15 @@ func (rf *Raft) AppendEntries(targetServerId int, heart bool) {
 		args.LeaderCommit = rf.CommitIndex
 		args.PrevLogTerm = rf.getEntryTerm(args.PrevLogIndex)
 		args.Entries = rf.log.getAppendEntries(args.PrevLogIndex + 1)
+		//len(args.Entries)目前一直小于等于0说明从来没有进行过日志复制或者日志复制失败了
+
 		log.Printf("%v: the len of log entries: %d is ready to send to node %d!!! and the entries are %v\n",
 			rf.SayMeL(), len(args.Entries), targetServerId, args.Entries)
 		rf.Mu.Unlock()
 
-		//fmt.Printf("\n %d is a leader, ready sending log entries to follower %d with args leaderTerm:%d, PrevLogIndex: %d, PrevLogTerm:%d, lastEntry:%v....", rf.me, targetServerId, args.LeaderTerm, args.PrevLogIndex, args.PrevLogTerm, args.Entries[args.PrevLogIndex])
 		ok := rf.sendRequestAppendEntries(false, targetServerId, &args, &reply)
 
 		if !ok {
-			//DPrintf(111, "%v: cannot request AppendEntries to %v args.term=%v\n", rf.SayMeL(), targetServerId, args.LeaderTerm)
 			return
 		}
 
@@ -441,18 +440,35 @@ func (rf *Raft) AppendEntries(targetServerId int, heart bool) {
 			rf.persist()
 			return
 		}
-		DPrintf(111, "%v: get append reply reply.PrevLogIndex=%v reply.PrevLogTerm=%v reply.Success=%v heart=%v\n", rf.SayMeL(), reply.PrevLogIndex, reply.PrevLogTerm, reply.Success, heart)
 
+		// if reply.Success {
+		// 	log.Printf("targetserverid is %d,myself is %d", targetServerId, rf.me)
+		// 	rf.peerTrackers[targetServerId].nextIndex = args.PrevLogIndex + len(args.Entries) + 1
+		// 	rf.peerTrackers[targetServerId].matchIndex = args.PrevLogIndex + len(args.Entries)
+		// 	log.Printf("%v: 更新节点%d的日志成功，nextIndex更新为%d, matchIndex更新为%d, 准备尝试一次提交日志...\n", rf.SayMeL(), targetServerId, rf.peerTrackers[targetServerId].nextIndex,
+		// 		rf.peerTrackers[targetServerId].matchIndex)
+		// 	rf.tryCommitL(rf.peerTrackers[targetServerId].matchIndex)
+		// 	return
+		// } else {
+		// 	DPrintf(111, "%v: 更新节点%d的日志失败，继续缩减 PrevLogIndex %d...\n", rf.SayMeL(), targetServerId, reply.PrevLogIndex)
+		// }
 		if reply.Success {
-			log.Printf("targetserverid is %d,myself is %d", targetServerId, rf.me)
-			rf.peerTrackers[targetServerId].nextIndex = args.PrevLogIndex + len(args.Entries) + 1
-			rf.peerTrackers[targetServerId].matchIndex = args.PrevLogIndex + len(args.Entries)
-			log.Printf("%v: 更新节点%d的日志成功，nextIndex更新为%d, matchIndex更新为%d, 准备尝试一次提交日志...\n", rf.SayMeL(), targetServerId, rf.peerTrackers[targetServerId].nextIndex,
-				rf.peerTrackers[targetServerId].matchIndex)
-			rf.tryCommitL(rf.peerTrackers[targetServerId].matchIndex)
+			if len(args.Entries) > 0 {
+				// 只有真正复制日志才更新
+				rf.peerTrackers[targetServerId].matchIndex = args.PrevLogIndex + len(args.Entries)
+				rf.peerTrackers[targetServerId].nextIndex = rf.peerTrackers[targetServerId].matchIndex + 1
+
+				log.Printf("update matchIndex[%d]=%d", targetServerId, rf.peerTrackers[targetServerId].matchIndex)
+
+				rf.tryCommitL(rf.peerTrackers[targetServerId].matchIndex)
+			} else {
+				// 心跳成功，只更新 nextIndex（可选）
+				rf.peerTrackers[targetServerId].nextIndex = max(
+					rf.peerTrackers[targetServerId].nextIndex,
+					args.PrevLogIndex+1,
+				)
+			}
 			return
-		} else {
-			DPrintf(111, "%v: 更新节点%d的日志失败，继续缩减 PrevLogIndex %d...\n", rf.SayMeL(), targetServerId, reply.PrevLogIndex)
 		}
 
 		//reply.Success is false
@@ -481,7 +497,7 @@ func (rf *Raft) AppendEntries(targetServerId int, heart bool) {
 			}
 			if PrevIndex+1 < rf.log.FirstLogIndex {
 				if rf.log.FirstLogIndex > 1 {
-					DPrintf(111, "%v:探测到节点%d的日志落后太多，发送快照！", rf.SayMeL(), targetServerId)
+					log.Printf("%v:探测到节点%d的日志落后太多，发送快照！", rf.SayMeL(), targetServerId)
 
 					go rf.InstallSnapshot(targetServerId)
 					return
@@ -560,7 +576,7 @@ func Make(peers []string, me int,
 	rf.snapshotLastIncludeTerm = 0
 	// 初始化状态机相关参数
 	rf.CommitIndex = 0
-	rf.LastApplied = 0
+	rf.LastApplied = -1
 	// initialize from state persisted before a crash
 	rf.readPersist() // 持久化一定要在commitIndex,lastApplied,snapshotLastIncludeTerm,snapshotLastIncludeIndex 初始化之后执行，否则持久化后恢复的数据会被覆盖为0
 	rf.ApplyHelper = NewApplyHelper(applyCh, rf.LastApplied)
