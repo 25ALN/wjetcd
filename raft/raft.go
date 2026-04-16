@@ -204,13 +204,7 @@ func (rf *Raft) readPersist() {
 // that the caller passes the address of the reply struct with &, not
 // the struct itself.
 //
-//	func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *RequestVoteReply) bool {
-//		//DPrintf("ready to call RequestVote Method...")
-//		//ok := rf.peers[server].Call("Raft.RequestVote", args, reply)
-//		// ok:=rf.sendAppendEntries(rf.peers[server], &tempargs, &tempreply)
-//		ok := true
-//		return ok
-//	}
+
 func (rf *Raft) sendRequestVote(serverAddr string, args *RequestVoteArgs, reply *RequestVoteReply) bool {
 	data, _ := json.Marshal(args)
 	resp, err := http.Post("http://"+serverAddr+"/raft/request_vote", "application/json", bytes.NewReader(data))
@@ -236,7 +230,6 @@ func (rf *Raft) sendRequestAppendEntries(isHeartbeat bool, server int, args *Req
 	if serverAddr == "" {
 		return false
 	}
-	log.Printf("server addr is :%s,own addr is :%s", serverAddr, rf.peers[rf.me-1])
 	// 复用 sendAppendEntries 的实现
 	return rf.sendAppendEntries(serverAddr, args, reply)
 }
@@ -270,6 +263,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	log.Printf("%v: a command index=%v cmd=%T %v come", rf.SayMeL(), index, command, command)
 	rf.log.appendL(Entry{term, command})
 	rf.persist()
+
 	log.Printf("%v: check the newly added log index：%d", rf.SayMeL(), rf.log.LastLogIndex)
 	go rf.StartAppendEntries(false)
 
@@ -441,17 +435,6 @@ func (rf *Raft) AppendEntries(targetServerId int, heart bool) {
 			return
 		}
 
-		// if reply.Success {
-		// 	log.Printf("targetserverid is %d,myself is %d", targetServerId, rf.me)
-		// 	rf.peerTrackers[targetServerId].nextIndex = args.PrevLogIndex + len(args.Entries) + 1
-		// 	rf.peerTrackers[targetServerId].matchIndex = args.PrevLogIndex + len(args.Entries)
-		// 	log.Printf("%v: 更新节点%d的日志成功，nextIndex更新为%d, matchIndex更新为%d, 准备尝试一次提交日志...\n", rf.SayMeL(), targetServerId, rf.peerTrackers[targetServerId].nextIndex,
-		// 		rf.peerTrackers[targetServerId].matchIndex)
-		// 	rf.tryCommitL(rf.peerTrackers[targetServerId].matchIndex)
-		// 	return
-		// } else {
-		// 	DPrintf(111, "%v: 更新节点%d的日志失败，继续缩减 PrevLogIndex %d...\n", rf.SayMeL(), targetServerId, reply.PrevLogIndex)
-		// }
 		if reply.Success {
 			if len(args.Entries) > 0 {
 				// 只有真正复制日志才更新
@@ -473,12 +456,12 @@ func (rf *Raft) AppendEntries(targetServerId int, heart bool) {
 
 		//reply.Success is false
 		if rf.log.empty() { //判掉为空的情况 方便后面讨论
-			DPrintf(111, "%v: 日志被快照清空，发送给%d快照", rf.SayMeL(), targetServerId)
+			log.Printf("%v: 日志被快照清空，发送给%d快照", rf.SayMeL(), targetServerId)
 			go rf.InstallSnapshot(targetServerId)
 			return
 		}
 		if reply.PrevLogIndex+1 < rf.log.FirstLogIndex {
-			DPrintf(111, "%v: 节点%d的日志落后太多，发送快照！", rf.SayMeL(), targetServerId)
+			log.Printf("%v: 节点%d的日志落后太多，发送快照！", rf.SayMeL(), targetServerId)
 			go rf.InstallSnapshot(targetServerId)
 			return
 		}
@@ -523,7 +506,6 @@ func (rf *Raft) sendMsgToTester() {
 	for !rf.killed() {
 		log.Printf("%v: it is being blocked...", rf.SayMeL())
 		rf.applyCond.Wait()
-
 		for rf.LastApplied+1 <= rf.CommitIndex {
 			i := rf.LastApplied + 1
 			rf.LastApplied++
@@ -619,7 +601,6 @@ func (rf *Raft) ticker() {
 		}
 		time.Sleep(tickInterval)
 	}
-	DPrintf(111, "tim")
 }
 
 func (rf *Raft) getLastEntryTerm() int {

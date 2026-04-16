@@ -16,7 +16,7 @@ func (rf *Raft) Snapshot(index int, snapshot []byte) {
 	if rf.State != Leader {
 		return
 	}
-	DPrintf(111, "%v: come Snapshot index=%v", rf.SayMeL(), index)
+	log.Printf("%v: come Snapshot index=%v", rf.SayMeL(), index)
 	if rf.log.FirstLogIndex <= index {
 		if index > rf.LastApplied {
 			panic(fmt.Sprintf("%v: index=%v rf.lastApplied=%v\n", rf.SayMeL(), index, rf.LastApplied))
@@ -27,7 +27,7 @@ func (rf *Raft) Snapshot(index int, snapshot []byte) {
 		newFirstLogIndex := index + 1
 		if newFirstLogIndex <= rf.log.LastLogIndex {
 			rf.log.Entries = rf.log.Entries[newFirstLogIndex-rf.log.FirstLogIndex:]
-			DPrintf(111, "%v: 被快照截断后的日志为: %v", rf.SayMeL(), rf.log.Entries)
+			log.Printf("%v: 被快照截断后的日志为: %v", rf.SayMeL(), rf.log.Entries)
 		} else {
 			rf.log.LastLogIndex = newFirstLogIndex - 1
 			rf.log.Entries = make([]Entry, 0)
@@ -35,7 +35,7 @@ func (rf *Raft) Snapshot(index int, snapshot []byte) {
 		rf.log.FirstLogIndex = newFirstLogIndex
 		rf.CommitIndex = max(rf.CommitIndex, index)
 		rf.LastApplied = max(rf.LastApplied, index)
-		DPrintf(111, "%v:进行快照后，更新commitIndex为%d, lastApplied为%d, "+
+		log.Printf("%v:进行快照后，更新commitIndex为%d, lastApplied为%d, "+
 			"但是snapshotLastIncludeIndex是%d", rf.SayMeL(), rf.CommitIndex, rf.LastApplied, rf.snapshotLastIncludeIndex)
 
 		rf.persist()
@@ -68,7 +68,7 @@ func (rf *Raft) RequestInstallSnapshot(args *RequestInstallSnapShotArgs, reply *
 	defer rf.persist()
 
 	if args.LastIncludeIndex > rf.snapshotLastIncludeIndex {
-		DPrintf(800, "%v: before install snapshot from leader %d: leader.log=%v", rf.SayMeL(), args.LeaderId, rf.log)
+		log.Printf("%v: before install snapshot from leader %d: leader.log=%v", rf.SayMeL(), args.LeaderId, rf.log)
 		rf.snapshot = args.Snapshot
 		rf.snapshotLastIncludeIndex = args.LastIncludeIndex
 		rf.snapshotLastIncludeTerm = args.LastIncludeTerm
@@ -80,7 +80,7 @@ func (rf *Raft) RequestInstallSnapshot(args *RequestInstallSnapShotArgs, reply *
 		}
 		rf.log.FirstLogIndex = args.LastIncludeIndex + 1
 
-		DPrintf(800, "%v: after install snapshot rf.log.FirstLogIndex=%v, rf.log=%v", rf.SayMeL(), rf.log.FirstLogIndex, rf.log)
+		log.Printf("%v: after install snapshot rf.log.FirstLogIndex=%v, rf.log=%v", rf.SayMeL(), rf.log.FirstLogIndex, rf.log)
 
 		if args.LastIncludeIndex > rf.LastApplied {
 			msg := ApplyMsg{
@@ -89,13 +89,13 @@ func (rf *Raft) RequestInstallSnapshot(args *RequestInstallSnapShotArgs, reply *
 				SnapshotTerm:  rf.snapshotLastIncludeTerm,
 				SnapshotIndex: rf.snapshotLastIncludeIndex,
 			}
-			DPrintf(800, "%v: next apply snapshot rf.snapshot.LastIncludeIndex=%v rf.snapshot.LastIncludeTerm=%v\n", rf.SayMeL(), rf.snapshotLastIncludeIndex, rf.snapshotLastIncludeTerm)
+			log.Printf("%v: next apply snapshot rf.snapshot.LastIncludeIndex=%v rf.snapshot.LastIncludeTerm=%v\n", rf.SayMeL(), rf.snapshotLastIncludeIndex, rf.snapshotLastIncludeTerm)
 			rf.ApplyHelper.tryApply(&msg)
 			rf.LastApplied = args.LastIncludeIndex
 		}
 		rf.CommitIndex = max(rf.CommitIndex, args.LastIncludeIndex)
 	}
-	DPrintf(111, "%v: successfully installing snapshot from LeaderId=%v with args.LastIncludeIndex=%v, args.LastIncludeTerm=%v\n", rf.SayMeL(), args.LeaderId, args.LastIncludeIndex, args.LastIncludeTerm)
+	log.Printf("%v: successfully installing snapshot from LeaderId=%v with args.LastIncludeIndex=%v, args.LastIncludeTerm=%v\n", rf.SayMeL(), args.LeaderId, args.LastIncludeIndex, args.LastIncludeTerm)
 
 }
 
@@ -149,7 +149,6 @@ func (rf *Raft) InstallSnapshot(serverId int) {
 }
 
 func (rf *Raft) sendRequestInstallSnapshot(server int, args *RequestInstallSnapShotArgs, reply *RequestInstallSnapShotReply) bool {
-	//ok := rf.peers[server].Call("Raft.RequestInstallSnapshot", args, reply)
 	ok := true
 	return ok
 }

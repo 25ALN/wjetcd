@@ -27,14 +27,29 @@ type Server struct {
 	replyCh  map[int]chan interface{}
 	rpcAddr  string
 	httpAddr string
-	watcher  map[string]int //监测哪些key发生了变化
+	watchers *WatchManager
+}
+
+type WatchManager struct {
+	mu      sync.Mutex
+	watcher map[string][]chan Event //监测哪些key发生了变化
+}
+
+type Watcher struct {
+	Key string
+	Ch  chan Event
+}
+
+type Event struct {
+	Key   string
+	Value string
+	Type  string
 }
 
 func NewServer(
 	id int,
 	raftAddr string,
 	peers []string,
-	//peers []*labrpc.ClientEnd,
 	wal *storage.WAL,
 	snapshot *storage.Snapshot,
 	rpcAddr string,
@@ -55,13 +70,6 @@ func NewServer(
 
 	// 创建Raft实例，mock Persister和peers
 	persister := raft.MakePersister()
-	//s.rf = raft.Make(nil, id, persister, s.applyCh)
-	// var temperrs []*labrpc.ClientEnd
-	// temperrs = make([]*labrpc.ClientEnd, len(peers))
-	// for i := 0; i < len(peers); i++ {
-	// 	ename := fmt.Sprintf("peer%d", i)
-	// 	temperrs[i] = labrpc.MakeNetwork().MakeEnd(ename)
-	// }
 	s.rf = raft.Make(peers, id, persister, s.applyCh)
 	// 启动Raft HTTP服务，监听Raft节点间通信端口
 	go func() {
@@ -76,6 +84,44 @@ func NewServer(
 	return s
 }
 
+// 添加watcher
+func (wa *WatchManager) AddWatcher(key string) chan Event {
+	wa.mu.Lock()
+	defer wa.mu.Unlock()
+	ch := make(chan Event, 10)
+	wa.watcher[key] = append(wa.watcher[key], ch)
+	return ch
+}
+
+func (s *Server) notifyWatchers(cmd kv.Command) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var eventType string
+	//只需要处理put和delete，get没有必要通知watcher
+	switch cmd.Type {
+	case kv.CmdPut:
+		eventType = "PUT"
+	case kv.CmdDelete:
+		eventType = "DELETE"
+	default:
+		return
+	}
+
+	event := Event{
+		Key:   cmd.Key,
+		Value: cmd.Value,
+		Type:  eventType,
+	}
+
+	for _, ch := range s.watchers.watcher[cmd.Key] {
+		select {
+		case ch <- event:
+		default:
+		}
+	}
+}
+
 // 启动应用日志循环
 func (s *Server) applyLoop() {
 	for msg := range s.applyCh {
@@ -87,7 +133,6 @@ func (s *Server) applyLoop() {
 		var result string
 		var cmdIdx int
 		if cmd, ok := msg.Command.(kv.Command); ok {
-			log.Printf("ready to write logs into files")
 			if s.wal != nil {
 				if err := s.wal.WriteEntry(cmd); err != nil {
 					log.Printf("[Server %d] WAL write error: %v", s.id, err)
@@ -113,19 +158,6 @@ func (s *Server) applyLoop() {
 	}
 }
 
-// 通知对应请求的响应通道
-// func (s *Server) notifyReply(cmdIdx int, result interface{}) {
-// 	s.mu.Lock()
-// 	defer s.mu.Unlock()
-
-//		if ch, ok := s.replyCh[cmdIdx]; ok {
-//			select {
-//			case ch <- result:
-//			default:
-//			}
-//			delete(s.replyCh, cmdIdx)
-//		}
-//	}
 func (s *Server) notifyReply(cmdIdx int, result interface{}) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -169,47 +201,6 @@ func (s *Server) Submit(cmd kv.Command) (string, error) {
 		return "", fmt.Errorf("timeout")
 	}
 }
-
-// func (s *Server) Submit(cmd kv.Command) (string, error) {
-// 	s.mu.Lock()
-// 	// 检查是否是Leader
-// 	isLeader := s.IsLeader()
-// 	s.mu.Unlock()
-
-// 	if !isLeader {
-// 		fmt.Printf("Node %d is not the leader\n", s.id)
-// 		return "", fmt.Errorf("not leader")
-// 	}
-
-// 	// 提交到Raft
-// 	log.Printf("send message to raft is %s ,%s", cmd.Key, cmd.Value)
-// 	idx, term, ok := s.rf.Start(cmd)
-
-// 	log.Printf("idx is %d,term is %d,ok is %v", idx, term, ok)
-// 	if !ok {
-// 		return "", fmt.Errorf("submit failed")
-// 	}
-
-// 	log.Printf("[Server %d] Submit command at index %d, term %d", s.id, idx, term)
-
-// 	// 创建响应通道
-// 	s.mu.Lock()
-// 	replyCh := make(chan interface{}, 1)
-// 	s.replyCh[idx] = replyCh
-// 	s.mu.Unlock()
-
-// 	// 等待应用完成（有超时）
-// 	select {
-// 	case result := <-replyCh:
-// 		return result.(string), nil
-// 	case <-time.After(5 * time.Second):
-// 		s.mu.Lock()
-// 		defer s.mu.Unlock()
-// 		delete(s.replyCh, idx)
-// 		log.Printf("timeout ready to print error")
-// 		return "", fmt.Errorf("timeout")
-// 	}
-// }
 
 // 从本地存储读取（无需经过Raft）
 func (s *Server) Get(key string) string {

@@ -42,7 +42,6 @@ func (kv *KVStore) Apply(cmd Command) (string, error) {
 	}
 }
 
-// 直接从存储读取（暂时不经过Raft）
 func (kv *KVStore) Get(key string) string {
 	kv.mu.RLock()
 	defer kv.mu.RUnlock()

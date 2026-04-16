@@ -8,6 +8,7 @@ import (
 )
 
 func main() {
+	fmt.Printf("RPC client start .....")
 	rpcAddr := flag.String("rpcaddr", "127.0.0.1:6000", "RPC server address")
 	op := flag.String("op", "", "operation: put, get or delete")
 	key := flag.String("key", "", "key")

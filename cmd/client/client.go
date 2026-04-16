@@ -9,7 +9,6 @@ import (
 )
 
 func main() {
-	//httpAddr := flag.String("addr", "127.0.0.1:9001", "HTTP server address")
 	httpAddr := flag.String("addrs", "127.0.0.1:9001,127.0.0.1:9002,127.0.0.1:9003", "server addresses")
 	op := flag.String("op", "", "operation: put or get")
 	key := flag.String("key", "", "key")
@@ -29,7 +28,6 @@ func main() {
 			fmt.Println("put operation requires -key and -value")
 			return
 		}
-		//err := httpPut(baseURL, *key, *value)
 		err := httpPut(addrlist, *key, *value)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
