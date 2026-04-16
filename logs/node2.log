@@ -1,7 +1,0 @@
-2026/04/15 20:31:36 Node 2 starting...
-2026/04/15 20:31:36 RaftAddr: 127.0.0.1:8002
-2026/04/15 20:31:36 Peers: [127.0.0.1:8001 127.0.0.1:8002 127.0.0.1:8003]
-2026/04/15 20:31:36 initialize the raft node become follower
-2026/04/15 20:31:36 enter the sendMsgToTester
-2026/04/15 20:31:36 success: it is being blocked...
-2026/04/15 20:31:37 success: 投出同意票给节点3
