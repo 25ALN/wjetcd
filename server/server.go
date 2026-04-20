@@ -31,13 +31,24 @@ type Server struct {
 }
 
 type WatchManager struct {
-	mu      sync.Mutex
-	watcher map[string][]chan Event //监测哪些key发生了变化
+	watchMu  sync.Mutex
+	watchers map[string]map[uint64]*watcherInfo // key -> watcherID -> watcherInfo
+	nextID   uint64
+}
+
+type watcherInfo struct {
+	id         uint64
+	ch         chan Event
+	prevValue  string
+	persistent bool // 是否持续监听
+	expireAt   int64 // 超时时间戳 (unix nano)
 }
 
 type Watcher struct {
-	Key string
-	Ch  chan Event
+	Key    string
+	ID     uint64
+	Ch     chan Event
+	Cancel chan struct{}
 }
 
 type Event struct {
@@ -66,6 +77,7 @@ func NewServer(
 		replyCh:  make(map[int]chan interface{}),
 		rpcAddr:  rpcAddr,
 		httpAddr: httpAddr,
+		watchers: NewWatchManager(),
 	}
 
 	// 创建Raft实例，mock Persister和peers
@@ -81,24 +93,90 @@ func NewServer(
 	// 启动应用日志循环
 	go s.applyLoop()
 
+	// 启动过期watcher清理goroutine
+	go s.cleanupLoop()
+
 	return s
 }
 
+func NewWatchManager() *WatchManager {
+	return &WatchManager{
+		watchers: make(map[string]map[uint64]*watcherInfo),
+	}
+}
+
 // 添加watcher
-func (wa *WatchManager) AddWatcher(key string) chan Event {
-	wa.mu.Lock()
-	defer wa.mu.Unlock()
+// persistent: 是否持续监听 (触发后不删除)
+// timeout: 超时时间 (0 表示不过期)
+func (wa *WatchManager) AddWatcher(key string, persistent bool, timeout time.Duration) *Watcher {
+	wa.watchMu.Lock()
+	defer wa.watchMu.Unlock()
+
+	wa.nextID++
+	id := wa.nextID
+
 	ch := make(chan Event, 10)
-	wa.watcher[key] = append(wa.watcher[key], ch)
-	return ch
+	cancelCh := make(chan struct{})
+
+	expireAt := int64(0)
+	if timeout > 0 {
+		expireAt = time.Now().Add(timeout).UnixNano()
+	}
+
+	info := &watcherInfo{
+		id:         id,
+		ch:         ch,
+		persistent: persistent,
+		expireAt:   expireAt,
+	}
+
+	if wa.watchers[key] == nil {
+		wa.watchers[key] = make(map[uint64]*watcherInfo)
+	}
+	wa.watchers[key][id] = info
+
+	return &Watcher{
+		Key:    key,
+		ID:     id,
+		Ch:     ch,
+		Cancel: cancelCh,
+	}
+}
+
+// 取消watcher
+func (wa *WatchManager) RemoveWatcher(key string, id uint64) {
+	wa.watchMu.Lock()
+	defer wa.watchMu.Unlock()
+
+	if watchers, ok := wa.watchers[key]; ok {
+		if info, ok := watchers[id]; ok {
+			close(info.ch)
+			delete(watchers, id)
+		}
+	}
+}
+
+// 清理过期的watcher
+func (wa *WatchManager) CleanupExpired() {
+	wa.watchMu.Lock()
+	defer wa.watchMu.Unlock()
+
+	now := time.Now().UnixNano()
+	for key, watchers := range wa.watchers {
+		for id, info := range watchers {
+			if info.expireAt > 0 && now > info.expireAt {
+				close(info.ch)
+				delete(watchers, id)
+			}
+		}
+		if len(watchers) == 0 {
+			delete(wa.watchers, key)
+		}
+	}
 }
 
 func (s *Server) notifyWatchers(cmd kv.Command) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	var eventType string
-	//只需要处理put和delete，get没有必要通知watcher
 	switch cmd.Type {
 	case kv.CmdPut:
 		eventType = "PUT"
@@ -114,11 +192,39 @@ func (s *Server) notifyWatchers(cmd kv.Command) {
 		Type:  eventType,
 	}
 
-	for _, ch := range s.watchers.watcher[cmd.Key] {
+	s.watchers.watchMu.Lock()
+	watchers, ok := s.watchers.watchers[cmd.Key]
+	if !ok {
+		s.watchers.watchMu.Unlock()
+		return
+	}
+
+	for id, info := range watchers {
 		select {
-		case ch <- event:
+		case info.ch <- event:
+			if !info.persistent {
+				close(info.ch)
+				delete(watchers, id)
+			}
 		default:
 		}
+	}
+
+	if len(watchers) == 0 {
+		delete(s.watchers.watchers, cmd.Key)
+	}
+	s.watchers.watchMu.Unlock()
+}
+
+func (s *Server) CancelWatcher(key string, id uint64) {
+	s.watchers.RemoveWatcher(key, id)
+}
+
+func (s *Server) cleanupLoop() {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		s.watchers.CleanupExpired()
 	}
 }
 
@@ -128,28 +234,28 @@ func (s *Server) applyLoop() {
 		if !msg.CommandValid {
 			continue
 		}
-		log.Printf("APPLY idx=%d", msg.CommandIndex)
-		s.mu.Lock()
+
 		var result string
 		var cmdIdx int
-		if cmd, ok := msg.Command.(kv.Command); ok {
-			if s.wal != nil {
-				if err := s.wal.WriteEntry(cmd); err != nil {
-					log.Printf("[Server %d] WAL write error: %v", s.id, err)
-				} else {
-					log.Printf("success save datas")
-				}
-			}
-			result, _ = s.store.Apply(cmd)
-			cmdIdx = msg.CommandIndex
+
+		s.mu.Lock()
+		cmd, ok := msg.Command.(kv.Command)
+		if !ok {
+			s.mu.Unlock()
+			continue
 		}
+		if s.wal != nil {
+			s.wal.WriteEntry(cmd)
+		}
+		result, _ = s.store.Apply(cmd)
+		cmdIdx = msg.CommandIndex
+		s.notifyWatchers(cmd)
 		s.mu.Unlock()
 
 		if cmdIdx >= 0 {
 			s.notifyReply(cmdIdx, result)
 		}
 
-		// 更新LastApplied
 		s.mu.Lock()
 		if msg.CommandIndex > s.rf.LastApplied {
 			s.rf.LastApplied = msg.CommandIndex
@@ -162,12 +268,11 @@ func (s *Server) notifyReply(cmdIdx int, result interface{}) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if ch, ok := s.replyCh[cmdIdx]; ok {
-		ch <- result
+		select {
+		case ch <- result:
+		default:
+		}
 		delete(s.replyCh, cmdIdx)
-		log.Printf("NOTIFY idx=%d exist=%v", cmdIdx, ok)
-
-	} else {
-		log.Printf(" replyCh not found for idx=%d (RESULT LOST!)", cmdIdx)
 	}
 }
 
@@ -230,6 +335,8 @@ func (s *Server) StartHTTPServer() error {
 	http.HandleFunc("/put", handler.Put)
 	http.HandleFunc("/get", handler.Get)
 	http.HandleFunc("/delete", handler.Delete)
+	http.HandleFunc("/watch", handler.Watch)
+	http.HandleFunc("/wait", handler.Wait)
 	http.HandleFunc("/health", handler.Health)
 	http.HandleFunc("/stats", handler.Stats)
 	return http.ListenAndServe(s.httpAddr, nil)

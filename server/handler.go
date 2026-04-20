@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"testetcd/kv"
+	"time"
 )
 
 // HTTP Handler for REST API
@@ -57,6 +58,21 @@ type DeleteResponse struct {
 	Ok bool
 }
 
+type WatchRequest struct {
+	Key        string
+	Persistent bool
+	Timeout    int64
+	WatcherID  uint64
+}
+
+type WatchResponse struct {
+	WatcherID uint64
+}
+
+type WatchEvent struct {
+	Event
+}
+
 // RPC: Put
 func (h *Handler) Put(req *PutRequest, resp *PutResponse) error {
 	cmd := kv.Command{
@@ -89,6 +105,21 @@ func (h *Handler) Delete(req *DeleteRequest, resp *DeleteResponse) error {
 	_, err := h.s.Submit(cmd)
 	resp.Ok = (err == nil)
 	return err
+}
+
+func (h *Handler) Watch(req *WatchRequest, resp *WatchResponse) error {
+	timeout := time.Duration(req.Timeout) * time.Millisecond
+	if req.Timeout == 0 {
+		timeout = 0
+	}
+	watcher := h.s.watchers.AddWatcher(req.Key, req.Persistent, timeout)
+	resp.WatcherID = watcher.ID
+	return nil
+}
+
+func (h *Handler) CancelWatch(req *WatchRequest, resp *WatchResponse) error {
+	h.s.CancelWatcher(req.Key, req.WatcherID)
+	return nil
 }
 
 // HTTP PUT handler
@@ -201,6 +232,79 @@ func (h *HTTPHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, `{"ok":true,"stats":%s}`, toJSON(stats))
+}
+
+// Watch handler - 简化版，用于演示
+func (h *HTTPHandler) Watch(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	key := r.URL.Query().Get("key")
+	if key == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"ok":false,"error":"key required"}`)
+		return
+	}
+
+	persistent := r.URL.Query().Get("persistent") == "true"
+	timeout := r.URL.Query().Get("timeout")
+
+	var timeoutDur time.Duration
+	if timeout != "" {
+		var timeoutMs int64
+		fmt.Sscanf(timeout, "%d", &timeoutMs)
+		timeoutDur = time.Duration(timeoutMs) * time.Millisecond
+	}
+
+	watcher := h.server.watchers.AddWatcher(key, persistent, timeoutDur)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"ok":true,"watcher_id":%d}`, watcher.ID)
+}
+
+// Wait handler - 等待 watch 事件
+func (h *HTTPHandler) Wait(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	key := r.URL.Query().Get("key")
+	if key == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"ok":false,"error":"key required"}`)
+		return
+	}
+
+	timeout := r.URL.Query().Get("timeout")
+	var timeoutDur time.Duration = 5 * time.Second
+	if timeout != "" {
+		var timeoutMs int64
+		fmt.Sscanf(timeout, "%d", &timeoutMs)
+		if timeoutMs > 0 {
+			timeoutDur = time.Duration(timeoutMs) * time.Millisecond
+		}
+	}
+
+	persistent := r.URL.Query().Get("persistent") == "true"
+
+	watcher := h.server.watchers.AddWatcher(key, persistent, timeoutDur)
+
+	select {
+	case event := <-watcher.Ch:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, `{"ok":true,"key":"%s","value":"%s","type":"%s"}`, event.Key, event.Value, event.Type)
+	case <-time.After(timeoutDur):
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, `{"ok":false,"error":"timeout"}`)
+	}
 }
 
 // 简单的JSON编码

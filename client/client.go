@@ -67,3 +67,29 @@ func (c *Client) Delete(key string) error {
 func (c *Client) Close() error {
 	return c.conn.Close()
 }
+
+func (c *Client) Watch(key string, persistent bool, timeoutMs int64) (uint64, error) {
+	req := &server.WatchRequest{
+		Key:        key,
+		Persistent: persistent,
+		Timeout:    timeoutMs,
+	}
+	resp := &server.WatchResponse{}
+
+	err := c.conn.Call("Handler.Watch", req, resp)
+	if err != nil {
+		return 0, err
+	}
+	return resp.WatcherID, nil
+}
+
+func (c *Client) CancelWatch(key string, watcherID uint64) error {
+	req := &server.WatchRequest{
+		Key:       key,
+		WatcherID: watcherID,
+	}
+	resp := &server.WatchResponse{}
+
+	err := c.conn.Call("Handler.CancelWatch", req, resp)
+	return err
+}
