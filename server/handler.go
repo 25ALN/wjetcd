@@ -320,10 +320,119 @@ func toJSON(m map[string]interface{}) string {
 			result += fmt.Sprintf(`"%s":"%s"`, k, val)
 		case int:
 			result += fmt.Sprintf(`"%s":%d`, k, val)
+		case int64:
+			result += fmt.Sprintf(`"%s":%d`, k, val)
 		case bool:
 			result += fmt.Sprintf(`"%s":%t`, k, val)
 		}
 	}
 	result += "}"
 	return result
+}
+
+func (h *HTTPHandler) LeaseGrant(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost && r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	ttl := r.URL.Query().Get("ttl")
+	var ttlVal int64 = 10
+	if ttl != "" {
+		fmt.Sscanf(ttl, "%d", &ttlVal)
+	}
+	cmd := kv.Command{Type: kv.CmdLeaseGrant, TTL: ttlVal}
+	result, err := h.server.Submit(cmd)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"ok":false,"error":"%s"}`, err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"ok":true,"lease_id":%s}`, result)
+}
+
+func (h *HTTPHandler) LeaseRevoke(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete && r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	leaseIdStr := r.URL.Query().Get("lease_id")
+	var leaseId int64
+	if leaseIdStr != "" {
+		fmt.Sscanf(leaseIdStr, "%d", &leaseId)
+	}
+	cmd := kv.Command{Type: kv.CmdLeaseRevoke, LeaseID: leaseId}
+	_, err := h.server.Submit(cmd)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"ok":false,"error":"%s"}`, err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"ok":true}`)
+}
+
+func (h *HTTPHandler) LeaseKeepAlive(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut && r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	leaseIdStr := r.URL.Query().Get("lease_id")
+	var leaseId int64
+	if leaseIdStr != "" {
+		fmt.Sscanf(leaseIdStr, "%d", &leaseId)
+	}
+	ttlStr := r.URL.Query().Get("ttl")
+	var ttlVal int64 = 10
+	if ttlStr != "" {
+		fmt.Sscanf(ttlStr, "%d", &ttlVal)
+	}
+	cmd := kv.Command{Type: kv.CmdLeaseKeepAlive, LeaseID: leaseId, TTL: ttlVal}
+	result, err := h.server.Submit(cmd)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"ok":false,"error":"%s"}`, err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"ok":true,"result":"%s"}`, result)
+}
+
+func (h *HTTPHandler) LeaseAttach(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut && r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	key := r.URL.Query().Get("key")
+	value := r.URL.Query().Get("value")
+	leaseIdStr := r.URL.Query().Get("lease_id")
+	var leaseId int64
+	if leaseIdStr != "" {
+		fmt.Sscanf(leaseIdStr, "%d", &leaseId)
+	}
+	if key == "" || leaseId <= 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"ok":false,"error":"key and lease_id required"}`)
+		return
+	}
+	lease := h.server.leaseMgr.GetLease(leaseId)
+	if lease == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, `{"ok":false,"error":"lease not found"}`)
+		return
+	}
+	h.server.leaseMgr.Attach(leaseId, key, value)
+	h.server.store.SetKeyLease(key, leaseId)
+	h.server.store.Put(key, value)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"ok":true}`)
 }

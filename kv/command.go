@@ -6,10 +6,16 @@ const (
 	CmdPut CommandType = iota
 	CmdGet
 	CmdDelete
+	CmdLeaseGrant
+	CmdLeaseRevoke
+	CmdLeaseAttach
+	CmdLeaseKeepAlive
 )
 
 type Command struct {
-	Type  CommandType
-	Key   string
-	Value string
+	Type    CommandType
+	Key     string
+	Value   string
+	LeaseID int64
+	TTL    int64
 }

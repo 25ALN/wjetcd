@@ -28,6 +28,7 @@ type Server struct {
 	rpcAddr  string
 	httpAddr string
 	watchers *WatchManager
+	leaseMgr *LeaseManager
 }
 
 type WatchManager struct {
@@ -57,6 +58,216 @@ type Event struct {
 	Type  string
 }
 
+type Lease struct {
+	ID       int64
+	TTL      int64
+	expireAt int64
+	Keys    map[string]string
+}
+
+type leaseItem struct {
+	ID       int64
+	expireAt int64
+}
+
+type LeaseManager struct {
+	mu       sync.Mutex
+	leases   map[int64]*Lease
+	leaseID int64
+	heap    []*leaseItem
+}
+
+func NewLeaseManager() *LeaseManager {
+	return &LeaseManager{
+		leases: make(map[int64]*Lease),
+		heap:  make([]*leaseItem, 0),
+	}
+}
+
+func (le *LeaseManager) Grant(ttl int64) int64 {
+	le.mu.Lock()
+	defer le.mu.Unlock()
+
+	le.leaseID++
+	id := le.leaseID
+	expireAt := time.Now().UnixNano() + ttl*1e6
+
+	l := &Lease{
+		ID:       id,
+		TTL:      ttl,
+		expireAt: expireAt,
+		Keys:    make(map[string]string),
+	}
+	le.leases[id] = l
+
+	item := &leaseItem{ID: id, expireAt: expireAt}
+	le.heap = append(le.heap, item)
+	le.bubbleUp(len(le.heap) - 1)
+
+	return id
+}
+
+func (le *LeaseManager) Attach(leaseId int64, key string, value string) {
+	le.mu.Lock()
+	defer le.mu.Unlock()
+
+	lease := le.leases[leaseId]
+	if lease == nil {
+		return
+	}
+	lease.Keys[key] = value
+}
+
+func (le *LeaseManager) Revoke(key string) int64 {
+	le.mu.Lock()
+	defer le.mu.Unlock()
+
+	for id, lease := range le.leases {
+		if _, ok := lease.Keys[key]; ok {
+			delete(lease.Keys, key)
+			return id
+		}
+	}
+	return 0
+}
+
+func (le *LeaseManager) GetLease(leaseId int64) *Lease {
+	le.mu.Lock()
+	defer le.mu.Unlock()
+	return le.leases[leaseId]
+}
+
+func (le *LeaseManager) KeepAlive(leaseId int64, ttl int64) bool {
+	le.mu.Lock()
+	defer le.mu.Unlock()
+
+	lease := le.leases[leaseId]
+	if lease == nil {
+		return false
+	}
+
+	lease.TTL = ttl
+	lease.expireAt = time.Now().UnixNano() + ttl*1e6
+
+	for i, item := range le.heap {
+		if item.ID == leaseId {
+			item.expireAt = lease.expireAt
+			le.bubbleDown(i)
+			le.bubbleUp(i)
+			break
+		}
+	}
+	return true
+}
+
+func (le *LeaseManager) RevokeLease(leaseId int64) []string {
+	le.mu.Lock()
+	defer le.mu.Unlock()
+
+	lease := le.leases[leaseId]
+	if lease == nil {
+		return nil
+	}
+
+	keys := make([]string, 0, len(lease.Keys))
+	for key := range lease.Keys {
+		keys = append(keys, key)
+	}
+
+	delete(le.leases, leaseId)
+
+	for i, item := range le.heap {
+		if item.ID == leaseId {
+			le.heap[i] = le.heap[len(le.heap)-1]
+			le.heap = le.heap[:len(le.heap)-1]
+			if i < len(le.heap) {
+				le.bubbleDown(i)
+				le.bubbleUp(i)
+			}
+			break
+		}
+	}
+
+	return keys
+}
+
+func (le *LeaseManager) GetExpiringLease() *leaseItem {
+	le.mu.Lock()
+	defer le.mu.Unlock()
+
+	if len(le.heap) == 0 {
+		return nil
+	}
+	return le.heap[0]
+}
+
+func (le *LeaseManager) RemoveExpiredLease() ([]string, int64) {
+	le.mu.Lock()
+	defer le.mu.Unlock()
+
+	if len(le.heap) == 0 {
+		return nil, 0
+	}
+
+	item := le.heap[0]
+	now := time.Now().UnixNano()
+	if item.expireAt > now {
+		return nil, 0
+	}
+
+	lease := le.leases[item.ID]
+	if lease == nil {
+		return nil, 0
+	}
+
+	keys := make([]string, 0, len(lease.Keys))
+	for key := range lease.Keys {
+		keys = append(keys, key)
+	}
+
+	delete(le.leases, item.ID)
+
+	le.heap[0] = le.heap[len(le.heap)-1]
+	le.heap = le.heap[:len(le.heap)-1]
+	if len(le.heap) > 0 {
+		le.bubbleDown(0)
+	}
+
+	return keys, item.ID
+}
+
+func (le *LeaseManager) bubbleUp(i int) {
+	for i > 0 {
+		parent := (i - 1) / 2
+		if le.heap[i].expireAt >= le.heap[parent].expireAt {
+			break
+		}
+		le.heap[i], le.heap[parent] = le.heap[parent], le.heap[i]
+		i = parent
+	}
+}
+
+func (le *LeaseManager) bubbleDown(i int) {
+	n := len(le.heap)
+	for {
+		left := 2*i + 1
+		right := 2*i + 2
+		smallest := i
+
+		if left < n && le.heap[left].expireAt < le.heap[smallest].expireAt {
+			smallest = left
+		}
+		if right < n && le.heap[right].expireAt < le.heap[smallest].expireAt {
+			smallest = right
+		}
+		if smallest == i {
+			break
+		}
+		le.heap[i], le.heap[smallest] = le.heap[smallest], le.heap[i]
+		i = smallest
+	}
+}
+
 func NewServer(
 	id int,
 	raftAddr string,
@@ -78,6 +289,7 @@ func NewServer(
 		rpcAddr:  rpcAddr,
 		httpAddr: httpAddr,
 		watchers: NewWatchManager(),
+		leaseMgr: NewLeaseManager(),
 	}
 
 	// 创建Raft实例，mock Persister和peers
@@ -221,10 +433,30 @@ func (s *Server) CancelWatcher(key string, id uint64) {
 }
 
 func (s *Server) cleanupLoop() {
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 	for range ticker.C {
+		s.cleanupExpiredLeases()
 		s.watchers.CleanupExpired()
+	}
+}
+
+func (s *Server) cleanupExpiredLeases() {
+	for {
+		keys, leaseId := s.leaseMgr.RemoveExpiredLease()
+		if leaseId == 0 {
+			return
+		}
+	leaseIdStr := fmt.Sprintf("%d", leaseId)
+	log.Printf("Lease %s expired, deleting keys: %v", leaseIdStr, keys)
+
+	s.mu.Lock()
+	for _, key := range keys {
+		cmd := kv.Command{Type: kv.CmdDelete, Key: key}
+		s.store.Apply(cmd)
+		s.notifyWatchers(cmd)
+	}
+	s.mu.Unlock()
 	}
 }
 
@@ -247,7 +479,53 @@ func (s *Server) applyLoop() {
 		if s.wal != nil {
 			s.wal.WriteEntry(cmd)
 		}
-		result, _ = s.store.Apply(cmd)
+
+		switch cmd.Type {
+		case kv.CmdLeaseGrant:
+			ttl := cmd.TTL
+			if ttl <= 0 {
+				ttl = 10
+			}
+			leaseId := s.leaseMgr.Grant(ttl)
+			result = fmt.Sprintf("%d", leaseId)
+
+		case kv.CmdLeaseRevoke:
+			leaseId := cmd.LeaseID
+			if leaseId > 0 {
+				keys := s.leaseMgr.RevokeLease(leaseId)
+				for _, key := range keys {
+					deleteCmd := kv.Command{Type: kv.CmdDelete, Key: key}
+					s.store.Apply(deleteCmd)
+					s.notifyWatchers(deleteCmd)
+				}
+			}
+			result = "OK"
+
+		case kv.CmdLeaseKeepAlive:
+			leaseId := cmd.LeaseID
+			ttl := cmd.TTL
+			if ttl <= 0 {
+				ttl = 10
+			}
+			ok := s.leaseMgr.KeepAlive(leaseId, ttl)
+			if ok {
+				result = "OK"
+			} else {
+				result = "ERROR"
+			}
+
+		case kv.CmdLeaseAttach:
+			if cmd.LeaseID > 0 {
+				s.leaseMgr.Attach(cmd.LeaseID, cmd.Key, cmd.Value)
+				s.store.SetKeyLease(cmd.Key, cmd.LeaseID)
+				s.store.Put(cmd.Key, cmd.Value)
+			}
+			result = "OK"
+
+		default:
+			result, _ = s.store.Apply(cmd)
+		}
+
 		cmdIdx = msg.CommandIndex
 		s.notifyWatchers(cmd)
 		s.mu.Unlock()
@@ -339,6 +617,10 @@ func (s *Server) StartHTTPServer() error {
 	http.HandleFunc("/wait", handler.Wait)
 	http.HandleFunc("/health", handler.Health)
 	http.HandleFunc("/stats", handler.Stats)
+	http.HandleFunc("/lease/grant", handler.LeaseGrant)
+	http.HandleFunc("/lease/revoke", handler.LeaseRevoke)
+	http.HandleFunc("/lease/keepalive", handler.LeaseKeepAlive)
+	http.HandleFunc("/lease/attach", handler.LeaseAttach)
 	return http.ListenAndServe(s.httpAddr, nil)
 }
 

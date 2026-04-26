@@ -6,14 +6,28 @@ import (
 )
 
 type KVStore struct {
-	mu   sync.RWMutex
-	data map[string]string
+	mu        sync.RWMutex
+	data      map[string]string
+	key2Lease map[string]int64
 }
 
 func NewKVStore() *KVStore {
 	return &KVStore{
-		data: make(map[string]string),
+		data:      make(map[string]string),
+		key2Lease: make(map[string]int64),
 	}
+}
+
+func (kv *KVStore) SetKeyLease(key string, leaseId int64) {
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+	kv.key2Lease[key] = leaseId
+}
+
+func (kv *KVStore) GetKeyLease(key string) int64 {
+	kv.mu.RLock()
+	defer kv.mu.RUnlock()
+	return kv.key2Lease[key]
 }
 
 // Apply：由 Raft 调用来应用命令
@@ -24,6 +38,9 @@ func (kv *KVStore) Apply(cmd Command) (string, error) {
 	switch cmd.Type {
 	case CmdPut:
 		kv.data[cmd.Key] = cmd.Value
+		if cmd.LeaseID > 0 {
+			kv.key2Lease[cmd.Key] = cmd.LeaseID
+		}
 		return "", nil
 
 	case CmdGet:
@@ -35,6 +52,14 @@ func (kv *KVStore) Apply(cmd Command) (string, error) {
 
 	case CmdDelete:
 		delete(kv.data, cmd.Key)
+		delete(kv.key2Lease, cmd.Key)
+		return "", nil
+
+	case CmdLeaseAttach:
+		if cmd.LeaseID > 0 {
+			kv.key2Lease[cmd.Key] = cmd.LeaseID
+			kv.data[cmd.Key] = cmd.Value
+		}
 		return "", nil
 
 	default:

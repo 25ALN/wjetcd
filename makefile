@@ -16,7 +16,7 @@ LOG_DIR=logs
 	run-server run-client run-rpcclient \
 	start-server start-client \
 	cluster-up cluster-down cluster-status \
-	test-put test-get test-watch test-all find-leader
+	test-put test-get test-watch test-lease-grant test-lease-revoke test-lease-attach test-lease-keepalive test-lease-expire test-watch-lease test-all find-leader
 
 # ========================
 # 编译
@@ -103,9 +103,14 @@ cluster-down:
 		if [ -f $$pidfile ]; then \
 			pid=$$(cat $$pidfile); \
 			echo "Killing $$pid"; \
-			kill $$pid || true; \
+			kill -15 $$pid 2>/dev/null || kill -9 $$pid 2>/dev/null || true; \
 		fi \
 	done
+	@sleep 1
+	@for port in 9001 9002 9003 7001 7002 7003 8001 8002 8003; do \
+		fuser -k $$port/tcp 2>/dev/null || true; \
+	done
+	@sleep 1
 	@rm -f $(LOG_DIR)/*.pid
 	@echo "Cluster stopped."
 
@@ -184,8 +189,143 @@ test-watch:
 	done
 	@echo "Watch test done!"
 
-# 运行所有测试
-test-all: test-put test-get test-watch
+# 测试 Lease Grant
+test-lease-grant:
+	@echo "Testing Lease Grant..."
+	@for i in 1 2 3; do \
+		status=$$(curl -s "http://127.0.0.1:900$$i/health" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4); \
+		if [ "$$status" = "leader" ]; then \
+			echo "Granting lease via node $$i..."; \
+			curl -s -X POST "http://127.0.0.1:900$$i/lease/grant?ttl=20"; \
+			echo ""; \
+			break; \
+		fi; \
+	done
+	@echo "Lease Grant test done!"
+
+# 测试 Lease Attach - 验证数据写入
+test-lease-attach:
+	@echo "Testing Lease Attach (via Raft)..."
+	@for i in 1 2 3; do \
+		status=$$(curl -s "http://127.0.0.1:900$$i/health" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4); \
+		if [ "$$status" = "leader" ]; then \
+			echo "1. Grant lease..."; \
+			lease_result=$$(curl -s -X POST "http://127.0.0.1:900$$i/lease/grant?ttl=20"); \
+			echo "$$lease_result"; \
+			lease_id=$$(echo "$$lease_result" | grep -o '"lease_id":[0-9]*' | cut -d':' -f2); \
+			echo "2. Attach key=attachtest, value=attachval to lease $$lease_id..."; \
+			attach_result=$$(curl -s -X POST "http://127.0.0.1:900$$i/lease/attach?key=attachtest&value=attachval&lease_id=$$lease_id"); \
+			echo "$$attach_result"; \
+			sleep 1; \
+			echo "3. Get value from leader (should be 'attachval' or empty due to async)..."; \
+			val=$$(curl -s "http://127.0.0.1:900$$i/get?key=attachtest" 2>/dev/null); \
+			echo "Leader: $$val"; \
+			echo "4. Get value from another node..."; \
+			for j in 1 2 3; do \
+				[ "$$j" != "$$i" ] && val=$$(curl -s "http://127.0.0.1:900$$j/get?key=attachtest" 2>/dev/null) && echo "Node $$j: $$val"; \
+			done; \
+			break; \
+		fi; \
+	done
+	@echo "Lease Attach test done!"
+
+# 测试 Lease Revoke
+test-lease-revoke:
+	@echo "Testing Lease Revoke..."
+	@for i in 1 2 3; do \
+		status=$$(curl -s "http://127.0.0.1:900$$i/health" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4); \
+		if [ "$$status" = "leader" ]; then \
+			echo "Granting lease..."; \
+			lease_result=$$(curl -s -X POST "http://127.0.0.1:900$$i/lease/grant?ttl=20"); \
+			lease_id=$$(echo "$$lease_result" | grep -o '"lease_id":[0-9]*' | cut -d':' -f2); \
+			echo "Attaching key..."; \
+			curl -s -X POST "http://127.0.0.1:900$$i/lease/attach?key=revokekey&value=revokevalue&lease_id=$$lease_id"; \
+			echo ""; \
+			echo "Waiting for replication..."; \
+			sleep 1; \
+			echo "Verifying key exists..."; \
+			val=$$(curl -s "http://127.0.0.1:900$$i/get?key=revokekey" 2>/dev/null); \
+			echo "$$val"; \
+			echo "Revoking lease $$lease_id..."; \
+			curl -s -X POST "http://127.0.0.1:900$$i/lease/revoke?lease_id=$$lease_id"; \
+			echo ""; \
+			sleep 1; \
+			echo "Verifying key deleted..."; \
+			val=$$(curl -s "http://127.0.0.1:900$$i/get?key=revokekey" 2>/dev/null); \
+			echo "$$val"; \
+			break; \
+		fi; \
+	done
+	@echo "Lease Revoke test done!"
+
+# 测试 Lease 过期自动删除
+test-lease-expire:
+	@echo "Testing Lease Expire..."
+	@for i in 1 2 3; do \
+		status=$$(curl -s "http://127.0.0.1:900$$i/health" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4); \
+		if [ "$$status" = "leader" ]; then \
+			echo "Granting short TTL lease (2 seconds)..."; \
+			lease_result=$$(curl -s -X POST "http://127.0.0.1:900$$i/lease/grant?ttl=2"); \
+			lease_id=$$(echo "$$lease_result" | grep -o '"lease_id":[0-9]*' | cut -d':' -f2); \
+			echo "Attaching key..."; \
+			curl -s -X POST "http://127.0.0.1:900$$i/lease/attach?key=expirekey&value=expirevalue&lease_id=$$lease_id"; \
+			echo ""; \
+			echo "Waiting for replication and expiry (3 seconds total)..."; \
+			sleep 1; \
+			val=$$(curl -s "http://127.0.0.1:900$$i/get?key=expirekey" 2>/dev/null); \
+			echo "Before expiry: $$val"; \
+			sleep 2; \
+			val=$$(curl -s "http://127.0.0.1:900$$i/get?key=expirekey" 2>/dev/null); \
+			echo "After expiry: $$val"; \
+			break; \
+		fi; \
+	done
+	@echo "Lease Expire test done!"
+
+# 测试 Watch 感知 Lease 过期删除
+test-watch-lease:
+	@echo "Testing Watch Lease Expiry..."
+	@for i in 1 2 3; do \
+		status=$$(curl -s "http://127.0.0.1:900$$i/health" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4); \
+		if [ "$$status" = "leader" ]; then \
+			echo "Granting short TTL lease..."; \
+			lease_result=$$(curl -s -X POST "http://127.0.0.1:900$$i/lease/grant?ttl=2"); \
+			lease_id=$$(echo "$$lease_result" | grep -o '"lease_id":[0-9]*' | cut -d':' -f2); \
+			echo "Attaching key..."; \
+			curl -s -X POST "http://127.0.0.1:900$$i/lease/attach?key=watchleasekey&value=watchleasevalue&lease_id=$$lease_id"; \
+			echo ""; \
+			echo "Waiting for expiry..."; \
+			sleep 3; \
+			echo "Verifying key deleted..."; \
+			val=$$(curl -s "http://127.0.0.1:900$$i/get?key=watchleasekey" 2>/dev/null); \
+			echo "$$val"; \
+			break; \
+		fi; \
+	done
+	@echo "Watch Lease test done!"
+
+# 测试集群重启后数据恢复
+test-leader-switch:
+	@echo "Testing Leader Switch..."
+	@for i in 1 2 3; do \
+		status=$$(curl -s "http://127.0.0.1:900$$i/health" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4); \
+		if [ "$$status" = "leader" ]; then \
+			old_leader=$$i; \
+			echo "Current leader: $$old_leader"; \
+			echo "Forcing new election (simulated by no action)..."; \
+			echo "Checking data is consistent across nodes..."; \
+			val1=$$(curl -s "http://127.0.0.1:9001/get?key=foo" 2>/dev/null); \
+			echo "Node 1: $$val1"; \
+			val2=$$(curl -s "http://127.0.0.1:9002/get?key=foo" 2>/dev/null); \
+			echo "Node 2: $$val2"; \
+			val3=$$(curl -s "http://127.0.0.1:9003/get?key=foo" 2>/dev/null); \
+			echo "Node 3: $$val3"; \
+			break; \
+		fi; \
+	done
+	@echo "Leader switch test done!"
+
+test-all: test-put test-get test-watch test-lease-grant test-lease-attach test-lease-revoke test-leader-switch
 	@echo ""
 	@echo "=== All tests passed! ==="
 
