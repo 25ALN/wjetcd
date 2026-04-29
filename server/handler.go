@@ -234,10 +234,16 @@ func (h *HTTPHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `{"ok":true,"stats":%s}`, toJSON(stats))
 }
 
-// Watch handler - 简化版，用于演示
 func (h *HTTPHandler) Watch(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if !h.server.IsLeader() {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		fmt.Fprintf(w, `{"ok":false,"error":"watch only supported on leader"}`)
 		return
 	}
 
@@ -270,6 +276,13 @@ func (h *HTTPHandler) Watch(w http.ResponseWriter, r *http.Request) {
 func (h *HTTPHandler) Wait(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if !h.server.IsLeader() {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		fmt.Fprintf(w, `{"ok":false,"error":"wait only supported on leader"}`)
 		return
 	}
 
@@ -309,7 +322,6 @@ func (h *HTTPHandler) Wait(w http.ResponseWriter, r *http.Request) {
 
 // 简单的JSON编码
 func toJSON(m map[string]interface{}) string {
-	// 简化实现，实际应该用json.Marshal
 	result := "{"
 	for k, v := range m {
 		if result != "{" {
@@ -422,16 +434,15 @@ func (h *HTTPHandler) LeaseAttach(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"ok":false,"error":"key and lease_id required"}`)
 		return
 	}
-	lease := h.server.leaseMgr.GetLease(leaseId)
-	if lease == nil {
+
+	cmd := kv.Command{Type: kv.CmdLeaseAttach, Key: key, Value: value, LeaseID: leaseId}
+	_, err := h.server.Submit(cmd)
+	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, `{"ok":false,"error":"lease not found"}`)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"ok":false,"error":"%s"}`, err.Error())
 		return
 	}
-	h.server.leaseMgr.Attach(leaseId, key, value)
-	h.server.store.SetKeyLease(key, leaseId)
-	h.server.store.Put(key, value)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, `{"ok":true}`)

@@ -41,7 +41,7 @@ type watcherInfo struct {
 	id         uint64
 	ch         chan Event
 	prevValue  string
-	persistent bool // 是否持续监听
+	persistent bool  // 是否持续监听
 	expireAt   int64 // 超时时间戳 (unix nano)
 }
 
@@ -62,7 +62,7 @@ type Lease struct {
 	ID       int64
 	TTL      int64
 	expireAt int64
-	Keys    map[string]string
+	Keys     map[string]string
 }
 
 type leaseItem struct {
@@ -71,8 +71,8 @@ type leaseItem struct {
 }
 
 type LeaseManager struct {
-	mu       sync.Mutex
-	leases   map[int64]*Lease
+	mu      sync.Mutex
+	leases  map[int64]*Lease
 	leaseID int64
 	heap    []*leaseItem
 }
@@ -80,7 +80,7 @@ type LeaseManager struct {
 func NewLeaseManager() *LeaseManager {
 	return &LeaseManager{
 		leases: make(map[int64]*Lease),
-		heap:  make([]*leaseItem, 0),
+		heap:   make([]*leaseItem, 0),
 	}
 }
 
@@ -90,13 +90,13 @@ func (le *LeaseManager) Grant(ttl int64) int64 {
 
 	le.leaseID++
 	id := le.leaseID
-	expireAt := time.Now().UnixNano() + ttl*1e6
+	expireAt := time.Now().UnixNano() + ttl*1e9
 
 	l := &Lease{
 		ID:       id,
 		TTL:      ttl,
 		expireAt: expireAt,
-		Keys:    make(map[string]string),
+		Keys:     make(map[string]string),
 	}
 	le.leases[id] = l
 
@@ -147,7 +147,7 @@ func (le *LeaseManager) KeepAlive(leaseId int64, ttl int64) bool {
 	}
 
 	lease.TTL = ttl
-	lease.expireAt = time.Now().UnixNano() + ttl*1e6
+	lease.expireAt = time.Now().UnixNano() + ttl*1e9
 
 	for i, item := range le.heap {
 		if item.ID == leaseId {
@@ -196,6 +196,7 @@ func (le *LeaseManager) GetExpiringLease() *leaseItem {
 	defer le.mu.Unlock()
 
 	if len(le.heap) == 0 {
+		log.Printf("Lease heap is empty")
 		return nil
 	}
 	return le.heap[0]
@@ -236,6 +237,7 @@ func (le *LeaseManager) RemoveExpiredLease() ([]string, int64) {
 	return keys, item.ID
 }
 
+// 插入新元素并保证最小的元素在堆顶
 func (le *LeaseManager) bubbleUp(i int) {
 	for i > 0 {
 		parent := (i - 1) / 2
@@ -247,6 +249,7 @@ func (le *LeaseManager) bubbleUp(i int) {
 	}
 }
 
+// 删除某个元素后调整堆使得堆最小元素在顶
 func (le *LeaseManager) bubbleDown(i int) {
 	n := len(le.heap)
 	for {
@@ -359,7 +362,6 @@ func (wa *WatchManager) AddWatcher(key string, persistent bool, timeout time.Dur
 func (wa *WatchManager) RemoveWatcher(key string, id uint64) {
 	wa.watchMu.Lock()
 	defer wa.watchMu.Unlock()
-
 	if watchers, ok := wa.watchers[key]; ok {
 		if info, ok := watchers[id]; ok {
 			close(info.ch)
@@ -447,16 +449,16 @@ func (s *Server) cleanupExpiredLeases() {
 		if leaseId == 0 {
 			return
 		}
-	leaseIdStr := fmt.Sprintf("%d", leaseId)
-	log.Printf("Lease %s expired, deleting keys: %v", leaseIdStr, keys)
+		leaseIdStr := fmt.Sprintf("%d", leaseId)
+		log.Printf("Lease %s expired, deleting keys: %v", leaseIdStr, keys)
 
-	s.mu.Lock()
-	for _, key := range keys {
-		cmd := kv.Command{Type: kv.CmdDelete, Key: key}
-		s.store.Apply(cmd)
-		s.notifyWatchers(cmd)
-	}
-	s.mu.Unlock()
+		s.mu.Lock()
+		for _, key := range keys {
+			cmd := kv.Command{Type: kv.CmdDelete, Key: key}
+			s.store.Apply(cmd)
+			s.notifyWatchers(cmd)
+		}
+		s.mu.Unlock()
 	}
 }
 
@@ -466,12 +468,23 @@ func (s *Server) applyLoop() {
 		if !msg.CommandValid {
 			continue
 		}
-
 		var result string
 		var cmdIdx int
 
 		s.mu.Lock()
 		cmd, ok := msg.Command.(kv.Command)
+		if !ok {
+			if m, isMap := msg.Command.(map[string]interface{}); isMap {
+				cmd = kv.Command{
+					Key:     toString(m["Key"]),
+					Value:   toString(m["Value"]),
+					LeaseID: toInt64(m["LeaseID"]),
+					TTL:     toInt64(m["TTL"]),
+					Type:    kv.CommandType(toInt(m["Type"])),
+				}
+				ok = true
+			}
+		}
 		if !ok {
 			s.mu.Unlock()
 			continue
@@ -542,6 +555,37 @@ func (s *Server) applyLoop() {
 	}
 }
 
+func toString(v interface{}) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
+}
+
+func toInt64(v interface{}) int64 {
+	switch val := v.(type) {
+	case int64:
+		return val
+	case float64: // JSON numbers decode as float64
+		return int64(val)
+	case int:
+		return int64(val)
+	}
+	return 0
+}
+
+func toInt(v interface{}) int {
+	switch val := v.(type) {
+	case int:
+		return val
+	case float64:
+		return int(val)
+	case int64:
+		return int(val)
+	}
+	return 0
+}
+
 func (s *Server) notifyReply(cmdIdx int, result interface{}) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -609,19 +653,20 @@ func (s *Server) StartRPCServer() {
 
 // 启动HTTP服务器
 func (s *Server) StartHTTPServer() error {
+	mux := http.NewServeMux()
 	handler := NewHTTPHandler(s)
-	http.HandleFunc("/put", handler.Put)
-	http.HandleFunc("/get", handler.Get)
-	http.HandleFunc("/delete", handler.Delete)
-	http.HandleFunc("/watch", handler.Watch)
-	http.HandleFunc("/wait", handler.Wait)
-	http.HandleFunc("/health", handler.Health)
-	http.HandleFunc("/stats", handler.Stats)
-	http.HandleFunc("/lease/grant", handler.LeaseGrant)
-	http.HandleFunc("/lease/revoke", handler.LeaseRevoke)
-	http.HandleFunc("/lease/keepalive", handler.LeaseKeepAlive)
-	http.HandleFunc("/lease/attach", handler.LeaseAttach)
-	return http.ListenAndServe(s.httpAddr, nil)
+	mux.HandleFunc("/put", handler.Put)
+	mux.HandleFunc("/get", handler.Get)
+	mux.HandleFunc("/delete", handler.Delete)
+	mux.HandleFunc("/watch", handler.Watch)
+	mux.HandleFunc("/wait", handler.Wait)
+	mux.HandleFunc("/health", handler.Health)
+	mux.HandleFunc("/stats", handler.Stats)
+	mux.HandleFunc("/lease/grant", handler.LeaseGrant)
+	mux.HandleFunc("/lease/revoke", handler.LeaseRevoke)
+	mux.HandleFunc("/lease/keepalive", handler.LeaseKeepAlive)
+	mux.HandleFunc("/lease/attach", handler.LeaseAttach)
+	return http.ListenAndServe(s.httpAddr, mux)
 }
 
 // 获取服务器统计信息

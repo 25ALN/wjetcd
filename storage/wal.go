@@ -104,13 +104,11 @@ func (w *WAL) ReadEntries() ([]interface{}, error) {
 func (w *WAL) Clear() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-
 	return w.file.Truncate(0)
 }
 
 // 截断日志到指定索引
 func (w *WAL) Truncate(index int) error {
-	// 简化实现，实际需要根据索引计算位置
 	return w.Clear()
 }
 

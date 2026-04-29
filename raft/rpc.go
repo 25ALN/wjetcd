@@ -43,24 +43,62 @@ func (rf *Raft) handleAppendEntries(w http.ResponseWriter, r *http.Request) {
 func (rf *Raft) handleAppendEntriesRPC(args *RequestAppendEntriesArgs, reply *RequestAppendEntriesReply) {
 	rf.Mu.Lock()
 	defer rf.Mu.Unlock()
+	reply.FollowerTerm = rf.CurrentTerm
 	if args.LeaderTerm < rf.CurrentTerm {
-		reply.FollowerTerm = rf.CurrentTerm
 		reply.Success = false
 		return
 	}
-	// term更新
 	if args.LeaderTerm > rf.CurrentTerm {
 		rf.CurrentTerm = args.LeaderTerm
 		rf.votedFor = -1
 		rf.persist()
+		reply.FollowerTerm = rf.CurrentTerm
 	}
-	// 只要收到心跳或日志同步请求（AppendEntries），都降级为Follower，防止脑裂
-	if rf.State != Follower {
-		log.Printf("receive heart become follower")
-		rf.State = Follower
-	}
+	rf.State = Follower
 	rf.resetElectionTimer()
-	reply.FollowerTerm = rf.CurrentTerm
+
+	// 日志匹配检查
+	if args.PrevLogIndex > 0 {
+		if rf.log.LastLogIndex < args.PrevLogIndex {
+			reply.Success = false
+			return
+		}
+		if rf.log.getOneEntry(args.PrevLogIndex).Term != args.PrevLogTerm {
+			reply.Success = false
+			return
+		}
+	}
+
+	// 追加或覆盖日志
+	if len(args.Entries) > 0 {
+		idx := args.PrevLogIndex
+		for _, entry := range args.Entries {
+			idx++
+			if idx < rf.log.FirstLogIndex {
+				continue
+			}
+			if idx <= rf.log.LastLogIndex {
+				// 存在冲突，覆盖
+				if rf.log.getOneEntry(idx).Term != entry.Term {
+					rf.log.Entries = rf.log.Entries[:rf.log.getRealIndex(idx)]
+					rf.log.LastLogIndex = idx - 1
+					rf.log.Entries = append(rf.log.Entries, entry)
+					rf.log.LastLogIndex++
+				}
+			} else {
+				// 追加新日志
+				rf.log.Entries = append(rf.log.Entries, entry)
+				rf.log.LastLogIndex++
+			}
+		}
+	}
+
+	// 更新 CommitIndex
+	if args.LeaderCommit > rf.CommitIndex {
+		rf.CommitIndex = min(args.LeaderCommit, rf.log.LastLogIndex)
+		rf.applyCond.Broadcast()
+	}
+
 	reply.Success = true
 }
 

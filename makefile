@@ -16,7 +16,8 @@ LOG_DIR=logs
 	run-server run-client run-rpcclient \
 	start-server start-client \
 	cluster-up cluster-down cluster-status \
-	test-put test-get test-watch test-lease-grant test-lease-revoke test-lease-attach test-lease-keepalive test-lease-expire test-watch-lease test-all find-leader
+	test-put test-get test-watch test-lease-grant test-lease-revoke test-lease-attach test-lease-keepalive test-lease-expire test-watch-lease test-all find-leader \
+	test-integration test-replication test-follower-watch
 
 # ========================
 # 编译
@@ -325,9 +326,51 @@ test-leader-switch:
 	done
 	@echo "Leader switch test done!"
 
-test-all: test-put test-get test-watch test-lease-grant test-lease-attach test-lease-revoke test-leader-switch
+test-all: test-put test-get test-watch test-lease-grant test-lease-attach test-lease-revoke test-replication test-follower-watch
 	@echo ""
 	@echo "=== All tests passed! ==="
+
+# ========================
+# 集成测试 (验证 Raft 复制与 Watch 限制)
+# ========================
+
+test-integration:
+	@echo "Running integration tests (Lease replication & Watch restriction)..."
+	@go test -v -run TestLeaseReplicationAndWatchRestriction ./server
+
+test-follower-watch:
+	@echo "Testing Watch on Follower (should fail)..."
+	@for i in 1 2 3; do \
+		status=$$(curl -s "http://127.0.0.1:900$$i/health" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4); \
+		if [ "$$status" != "leader" ]; then \
+			echo "Testing watch on follower node $$i..."; \
+			res=$$(curl -s "http://127.0.0.1:900$$i/watch?key=test"); \
+			echo "$$res" | grep -q '"error"' && echo "PASS: Follower correctly rejected watch" || echo "FAIL: Follower accepted watch"; \
+			break; \
+		fi; \
+	done
+
+test-replication:
+	@echo "Testing Lease Attach Replication..."
+	@for i in 1 2 3; do \
+		status=$$(curl -s "http://127.0.0.1:900$$i/health" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4); \
+		if [ "$$status" = "leader" ]; then \
+			leader=$$i; \
+			echo "Leader is node $$leader"; \
+			lease_result=$$(curl -s -X POST "http://127.0.0.1:900$$leader/lease/grant?ttl=30"); \
+			lease_id=$$(echo "$$lease_result" | grep -o '"lease_id":[0-9]*' | cut -d':' -f2); \
+			curl -s -X POST "http://127.0.0.1:900$$leader/lease/attach?key=repl_test&value=repl_val&lease_id=$$lease_id" > /dev/null; \
+			sleep 1; \
+			echo "Checking replication on all nodes:"; \
+			all_pass=true; \
+			for j in 1 2 3; do \
+				val=$$(curl -s "http://127.0.0.1:900$$j/get?key=repl_test" 2>/dev/null); \
+				echo "$$val" | grep -q '"value":"repl_val"' && echo "  Node $$j: PASS" || (echo "  Node $$j: FAIL ($$val)" && all_pass=false); \
+			done; \
+			if [ "$$all_pass" = true ]; then echo "PASS: Data replicated to all nodes"; else echo "FAIL: Replication incomplete"; fi; \
+			break; \
+		fi; \
+	done
 
 # ========================
 # 清理

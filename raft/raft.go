@@ -514,15 +514,12 @@ func (rf *Raft) sendMsgToTester() {
 					rf.SayMeL(), i, rf.log.FirstLogIndex, rf.LastApplied)
 				panic("error happening")
 			}
-			msg := ApplyMsg{
-				CommandValid: true,
-				Command:      rf.log.getOneEntry(i).Command,
-				CommandIndex: i,
-			}
-			log.Printf("%s: next apply index=%v lastApplied=%v len entries=%v "+
-				"LastLogIndex=%v cmd=%v\n", rf.SayMeL(), i, rf.LastApplied, len(rf.log.Entries),
-				rf.log.LastLogIndex, rf.log.getOneEntry(i).Command)
-			rf.ApplyHelper.tryApply(&msg)
+		msg := ApplyMsg{
+			CommandValid: true,
+			Command:      rf.log.getOneEntry(i).Command,
+			CommandIndex: i,
+		}
+		rf.ApplyHelper.tryApply(&msg)
 		}
 	}
 }
