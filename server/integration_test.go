@@ -84,7 +84,7 @@ func TestLeaseReplicationAndWatchRestriction(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	
+
 	// Parse lease_id from response: {"ok":true,"lease_id":1}
 	leaseID := "1" // simplified parsing for test, assuming first lease
 	if strings.Contains(string(body), `"lease_id"`) {

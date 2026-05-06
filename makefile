@@ -17,7 +17,8 @@ LOG_DIR=logs
 	start-server start-client \
 	cluster-up cluster-down cluster-status \
 	test-put test-get test-watch test-lease-grant test-lease-revoke test-lease-attach test-lease-keepalive test-lease-expire test-watch-lease test-all find-leader \
-	test-integration test-replication test-follower-watch
+	test-integration test-replication test-follower-watch \
+	test-mvcc-concurrent
 
 # ========================
 # 编译
@@ -167,143 +168,6 @@ test-get:
 	done || echo '{"error":"key not found"}'
 	@echo ""
 
-# 测试Watch
-test-watch:
-	@echo "Testing Watch..."
-	@echo "Step 1: Create watcher on key 'watchkey'..."
-	@for i in 1 2 3; do \
-		status=$$(curl -s "http://127.0.0.1:900$$i/health" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4); \
-		if [ "$$status" = "leader" ]; then \
-			echo "Creating watcher via node $$i..."; \
-			curl -s "http://127.0.0.1:900$$i/watch?key=watchkey"; \
-			echo ""; \
-			echo "Step 2: PUT to trigger watch..."; \
-			curl -s -X POST "http://127.0.0.1:900$$i/put?key=watchkey&value=newvalue"; \
-			echo ""; \
-			echo "Step 3: Verify value updated..."; \
-			for j in 1 2 3; do \
-				val=$$(curl -s "http://127.0.0.1:900$$j/get?key=watchkey" 2>/dev/null); \
-				echo "$$val" | grep -q '"value":"newvalue"' && echo "$$val" && break; \
-			done; \
-			break; \
-		fi; \
-	done
-	@echo "Watch test done!"
-
-# 测试 Lease Grant
-test-lease-grant:
-	@echo "Testing Lease Grant..."
-	@for i in 1 2 3; do \
-		status=$$(curl -s "http://127.0.0.1:900$$i/health" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4); \
-		if [ "$$status" = "leader" ]; then \
-			echo "Granting lease via node $$i..."; \
-			curl -s -X POST "http://127.0.0.1:900$$i/lease/grant?ttl=20"; \
-			echo ""; \
-			break; \
-		fi; \
-	done
-	@echo "Lease Grant test done!"
-
-# 测试 Lease Attach - 验证数据写入
-test-lease-attach:
-	@echo "Testing Lease Attach (via Raft)..."
-	@for i in 1 2 3; do \
-		status=$$(curl -s "http://127.0.0.1:900$$i/health" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4); \
-		if [ "$$status" = "leader" ]; then \
-			echo "1. Grant lease..."; \
-			lease_result=$$(curl -s -X POST "http://127.0.0.1:900$$i/lease/grant?ttl=20"); \
-			echo "$$lease_result"; \
-			lease_id=$$(echo "$$lease_result" | grep -o '"lease_id":[0-9]*' | cut -d':' -f2); \
-			echo "2. Attach key=attachtest, value=attachval to lease $$lease_id..."; \
-			attach_result=$$(curl -s -X POST "http://127.0.0.1:900$$i/lease/attach?key=attachtest&value=attachval&lease_id=$$lease_id"); \
-			echo "$$attach_result"; \
-			sleep 1; \
-			echo "3. Get value from leader (should be 'attachval' or empty due to async)..."; \
-			val=$$(curl -s "http://127.0.0.1:900$$i/get?key=attachtest" 2>/dev/null); \
-			echo "Leader: $$val"; \
-			echo "4. Get value from another node..."; \
-			for j in 1 2 3; do \
-				[ "$$j" != "$$i" ] && val=$$(curl -s "http://127.0.0.1:900$$j/get?key=attachtest" 2>/dev/null) && echo "Node $$j: $$val"; \
-			done; \
-			break; \
-		fi; \
-	done
-	@echo "Lease Attach test done!"
-
-# 测试 Lease Revoke
-test-lease-revoke:
-	@echo "Testing Lease Revoke..."
-	@for i in 1 2 3; do \
-		status=$$(curl -s "http://127.0.0.1:900$$i/health" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4); \
-		if [ "$$status" = "leader" ]; then \
-			echo "Granting lease..."; \
-			lease_result=$$(curl -s -X POST "http://127.0.0.1:900$$i/lease/grant?ttl=20"); \
-			lease_id=$$(echo "$$lease_result" | grep -o '"lease_id":[0-9]*' | cut -d':' -f2); \
-			echo "Attaching key..."; \
-			curl -s -X POST "http://127.0.0.1:900$$i/lease/attach?key=revokekey&value=revokevalue&lease_id=$$lease_id"; \
-			echo ""; \
-			echo "Waiting for replication..."; \
-			sleep 1; \
-			echo "Verifying key exists..."; \
-			val=$$(curl -s "http://127.0.0.1:900$$i/get?key=revokekey" 2>/dev/null); \
-			echo "$$val"; \
-			echo "Revoking lease $$lease_id..."; \
-			curl -s -X POST "http://127.0.0.1:900$$i/lease/revoke?lease_id=$$lease_id"; \
-			echo ""; \
-			sleep 1; \
-			echo "Verifying key deleted..."; \
-			val=$$(curl -s "http://127.0.0.1:900$$i/get?key=revokekey" 2>/dev/null); \
-			echo "$$val"; \
-			break; \
-		fi; \
-	done
-	@echo "Lease Revoke test done!"
-
-# 测试 Lease 过期自动删除
-test-lease-expire:
-	@echo "Testing Lease Expire..."
-	@for i in 1 2 3; do \
-		status=$$(curl -s "http://127.0.0.1:900$$i/health" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4); \
-		if [ "$$status" = "leader" ]; then \
-			echo "Granting short TTL lease (2 seconds)..."; \
-			lease_result=$$(curl -s -X POST "http://127.0.0.1:900$$i/lease/grant?ttl=2"); \
-			lease_id=$$(echo "$$lease_result" | grep -o '"lease_id":[0-9]*' | cut -d':' -f2); \
-			echo "Attaching key..."; \
-			curl -s -X POST "http://127.0.0.1:900$$i/lease/attach?key=expirekey&value=expirevalue&lease_id=$$lease_id"; \
-			echo ""; \
-			echo "Waiting for replication and expiry (3 seconds total)..."; \
-			sleep 1; \
-			val=$$(curl -s "http://127.0.0.1:900$$i/get?key=expirekey" 2>/dev/null); \
-			echo "Before expiry: $$val"; \
-			sleep 2; \
-			val=$$(curl -s "http://127.0.0.1:900$$i/get?key=expirekey" 2>/dev/null); \
-			echo "After expiry: $$val"; \
-			break; \
-		fi; \
-	done
-	@echo "Lease Expire test done!"
-
-# 测试 Watch 感知 Lease 过期删除
-test-watch-lease:
-	@echo "Testing Watch Lease Expiry..."
-	@for i in 1 2 3; do \
-		status=$$(curl -s "http://127.0.0.1:900$$i/health" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4); \
-		if [ "$$status" = "leader" ]; then \
-			echo "Granting short TTL lease..."; \
-			lease_result=$$(curl -s -X POST "http://127.0.0.1:900$$i/lease/grant?ttl=2"); \
-			lease_id=$$(echo "$$lease_result" | grep -o '"lease_id":[0-9]*' | cut -d':' -f2); \
-			echo "Attaching key..."; \
-			curl -s -X POST "http://127.0.0.1:900$$i/lease/attach?key=watchleasekey&value=watchleasevalue&lease_id=$$lease_id"; \
-			echo ""; \
-			echo "Waiting for expiry..."; \
-			sleep 3; \
-			echo "Verifying key deleted..."; \
-			val=$$(curl -s "http://127.0.0.1:900$$i/get?key=watchleasekey" 2>/dev/null); \
-			echo "$$val"; \
-			break; \
-		fi; \
-	done
-	@echo "Watch Lease test done!"
 
 # 测试集群重启后数据恢复
 test-leader-switch:
@@ -395,4 +259,12 @@ help:
 	@echo "  make test-get        # 测试GET读取"
 	@echo "  make test-watch     # 测试Watch机制"
 	@echo "  make test-all      # 运行所有测试"
+	@echo "  make test-mvcc-concurrent  # 运行MVCC高并发测试"
 	@echo "  make clean            # 清理所有文件"
+
+# ========================
+# MVCC 高并发测试
+# ========================
+test-mvcc-concurrent: build
+	@echo "Running MVCC concurrent test..."
+	@bash test_mvcc_concurrent.sh

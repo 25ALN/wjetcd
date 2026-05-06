@@ -63,6 +63,7 @@ type WatchRequest struct {
 	Persistent bool
 	Timeout    int64
 	WatcherID  uint64
+	FromRev    int64
 }
 
 type WatchResponse struct {
@@ -112,7 +113,7 @@ func (h *Handler) Watch(req *WatchRequest, resp *WatchResponse) error {
 	if req.Timeout == 0 {
 		timeout = 0
 	}
-	watcher := h.s.watchers.AddWatcher(req.Key, req.Persistent, timeout)
+	watcher := h.s.watchers.AddWatcher(req.Key, req.Persistent, timeout, req.FromRev)
 	resp.WatcherID = watcher.ID
 	return nil
 }
@@ -257,6 +258,9 @@ func (h *HTTPHandler) Watch(w http.ResponseWriter, r *http.Request) {
 
 	persistent := r.URL.Query().Get("persistent") == "true"
 	timeout := r.URL.Query().Get("timeout")
+	fromRevStr := r.URL.Query().Get("from_rev")
+	fromRev := int64(0)
+	fmt.Sscanf(fromRevStr, "%d", &fromRev)
 
 	var timeoutDur time.Duration
 	if timeout != "" {
@@ -265,7 +269,7 @@ func (h *HTTPHandler) Watch(w http.ResponseWriter, r *http.Request) {
 		timeoutDur = time.Duration(timeoutMs) * time.Millisecond
 	}
 
-	watcher := h.server.watchers.AddWatcher(key, persistent, timeoutDur)
+	watcher := h.server.watchers.AddWatcher(key, persistent, timeoutDur, fromRev)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -295,6 +299,10 @@ func (h *HTTPHandler) Wait(w http.ResponseWriter, r *http.Request) {
 	}
 
 	timeout := r.URL.Query().Get("timeout")
+	fromRevStr := r.URL.Query().Get("from_rev")
+	fromRev := int64(0)
+	fmt.Sscanf(fromRevStr, "%d", &fromRev)
+
 	var timeoutDur time.Duration = 5 * time.Second
 	if timeout != "" {
 		var timeoutMs int64
@@ -306,7 +314,7 @@ func (h *HTTPHandler) Wait(w http.ResponseWriter, r *http.Request) {
 
 	persistent := r.URL.Query().Get("persistent") == "true"
 
-	watcher := h.server.watchers.AddWatcher(key, persistent, timeoutDur)
+	watcher := h.server.watchers.AddWatcher(key, persistent, timeoutDur, fromRev)
 
 	select {
 	case event := <-watcher.Ch:

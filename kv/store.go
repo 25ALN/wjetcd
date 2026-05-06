@@ -2,18 +2,35 @@ package kv
 
 import (
 	"fmt"
+	"math"
 	"sync"
 )
 
+type VersionEntry struct {
+	Revision  int64
+	Value     string
+	Tombstone bool
+}
+
 type KVStore struct {
-	mu        sync.RWMutex
-	data      map[string]string
-	key2Lease map[string]int64
+	mu          sync.RWMutex
+	data        map[string][]*VersionEntry
+	key2Lease   map[string]int64
+	currentRev  int64
+	watchEvents []WatchEvent
+	watchMu     sync.RWMutex
+}
+
+type WatchEvent struct {
+	Key      string
+	Value    string
+	Type     string
+	Revision int64
 }
 
 func NewKVStore() *KVStore {
 	return &KVStore{
-		data:      make(map[string]string),
+		data:      make(map[string][]*VersionEntry),
 		key2Lease: make(map[string]int64),
 	}
 }
@@ -30,6 +47,19 @@ func (kv *KVStore) GetKeyLease(key string) int64 {
 	return kv.key2Lease[key]
 }
 
+func (kv *KVStore) GetCurrentRevision() int64 {
+	kv.mu.RLock()
+	defer kv.mu.RUnlock()
+	return kv.currentRev
+}
+
+func (kv *KVStore) IncrementRevision() int64 {
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+	kv.currentRev++
+	return kv.currentRev
+}
+
 // Apply：由 Raft 调用来应用命令
 func (kv *KVStore) Apply(cmd Command) (string, error) {
 	kv.mu.Lock()
@@ -37,28 +67,71 @@ func (kv *KVStore) Apply(cmd Command) (string, error) {
 
 	switch cmd.Type {
 	case CmdPut:
-		kv.data[cmd.Key] = cmd.Value
+		rev := cmd.Revision
+		if rev == 0 {
+			kv.currentRev++
+			rev = kv.currentRev
+		}
+		entry := &VersionEntry{
+			Revision:  rev,
+			Value:     cmd.Value,
+			Tombstone: false,
+		}
+		kv.data[cmd.Key] = append(kv.data[cmd.Key], entry)
 		if cmd.LeaseID > 0 {
 			kv.key2Lease[cmd.Key] = cmd.LeaseID
 		}
 		return "", nil
 
 	case CmdGet:
-		val, ok := kv.data[cmd.Key]
-		if !ok {
-			return "", nil
-		}
+		val, _ := kv.GetAtRevision(cmd.Key, cmd.Revision)
 		return val, nil
 
 	case CmdDelete:
-		delete(kv.data, cmd.Key)
+		rev := cmd.Revision
+		if rev == 0 {
+			kv.currentRev++
+			rev = kv.currentRev
+		}
+		entry := &VersionEntry{
+			Revision:  rev,
+			Value:     "",
+			Tombstone: true,
+		}
+		kv.data[cmd.Key] = append(kv.data[cmd.Key], entry)
 		delete(kv.key2Lease, cmd.Key)
 		return "", nil
 
+	case CmdCAS:
+		entries := kv.data[cmd.Key]
+		var latest *VersionEntry
+		if len(entries) > 0 {
+			latest = entries[len(entries)-1]
+		}
+		if latest != nil && !latest.Tombstone && latest.Revision == cmd.ExpectedRev {
+			kv.currentRev++
+			rev := kv.currentRev
+			entry := &VersionEntry{
+				Revision:  rev,
+				Value:     cmd.Value,
+				Tombstone: false,
+			}
+			kv.data[cmd.Key] = append(kv.data[cmd.Key], entry)
+			return "OK", nil
+		}
+		return "CAS_FAILED", nil
+		/**/
 	case CmdLeaseAttach:
 		if cmd.LeaseID > 0 {
 			kv.key2Lease[cmd.Key] = cmd.LeaseID
-			kv.data[cmd.Key] = cmd.Value
+			kv.currentRev++
+			rev := kv.currentRev
+			entry := &VersionEntry{
+				Revision:  rev,
+				Value:     cmd.Value,
+				Tombstone: false,
+			}
+			kv.data[cmd.Key] = append(kv.data[cmd.Key], entry)
 		}
 		return "", nil
 
@@ -67,66 +140,114 @@ func (kv *KVStore) Apply(cmd Command) (string, error) {
 	}
 }
 
-func (kv *KVStore) Get(key string) string {
+func (kv *KVStore) GetAtRevision(key string, rev int64) (string, int64) {
 	kv.mu.RLock()
 	defer kv.mu.RUnlock()
 
-	val, ok := kv.data[key]
-	if !ok {
-		return ""
+	entries, ok := kv.data[key]
+	if !ok || len(entries) == 0 {
+		return "", 0
 	}
+
+	if rev == 0 {
+		rev = math.MaxInt64
+	}
+
+	for i := len(entries) - 1; i >= 0; i-- {
+		if entries[i].Revision <= rev {
+			if entries[i].Tombstone {
+				return "", entries[i].Revision
+			}
+			return entries[i].Value, entries[i].Revision
+		}
+	}
+	return "", 0
+}
+
+func (kv *KVStore) Get(key string) string {
+	val, _ := kv.GetAtRevision(key, 0)
 	return val
 }
 
-// 直接写入
 func (kv *KVStore) Put(key, value string) {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
-
-	kv.data[key] = value
+	kv.currentRev++
+	entry := &VersionEntry{
+		Revision:  kv.currentRev,
+		Value:     value,
+		Tombstone: false,
+	}
+	kv.data[key] = append(kv.data[key], entry)
 }
 
-// 直接删除
 func (kv *KVStore) Delete(key string) {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
-
-	delete(kv.data, key)
+	kv.currentRev++
+	entry := &VersionEntry{
+		Revision:  kv.currentRev,
+		Value:     "",
+		Tombstone: true,
+	}
+	kv.data[key] = append(kv.data[key], entry)
 }
 
-// 获取所有键
 func (kv *KVStore) Keys() []string {
 	kv.mu.RLock()
 	defer kv.mu.RUnlock()
 
-	keys := make([]string, 0, len(kv.data))
-	for k := range kv.data {
-		keys = append(keys, k)
+	keys := make([]string, 0)
+	for k, entries := range kv.data {
+		if len(entries) > 0 {
+			latest := entries[len(entries)-1]
+			if !latest.Tombstone {
+				keys = append(keys, k)
+			}
+		}
 	}
 	return keys
 }
 
-// 获取存储大小
 func (kv *KVStore) Size() int {
 	kv.mu.RLock()
 	defer kv.mu.RUnlock()
 
-	return len(kv.data)
+	count := 0
+	for _, entries := range kv.data {
+		if len(entries) > 0 {
+			latest := entries[len(entries)-1]
+			if !latest.Tombstone {
+				count++
+			}
+		}
+	}
+	return count
 }
 
-// 检查键是否存在
 func (kv *KVStore) Exists(key string) bool {
-	kv.mu.RLock()
-	defer kv.mu.RUnlock()
-
-	_, ok := kv.data[key]
-	return ok
+	val := kv.Get(key)
+	return val != ""
 }
 
-// 清空存储
 func (kv *KVStore) Clear() {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
-	kv.data = make(map[string]string)
+	kv.data = make(map[string][]*VersionEntry)
+	kv.currentRev = 0
+}
+
+// 获取key的所有版本历史
+func (kv *KVStore) GetHistory(key string) []*VersionEntry {
+	kv.mu.RLock()
+	defer kv.mu.RUnlock()
+
+	entries, ok := kv.data[key]
+	if !ok {
+		return nil
+	}
+	result := make([]*VersionEntry, len(entries))
+	copy(result, entries)
+	return result
 }

@@ -24,17 +24,19 @@ type Server struct {
 	wal      *storage.WAL
 	snapshot *storage.Snapshot
 
-	replyCh  map[int]chan interface{}
-	rpcAddr  string
-	httpAddr string
-	watchers *WatchManager
-	leaseMgr *LeaseManager
+	replyCh    map[int]chan interface{}
+	rpcAddr    string
+	httpAddr   string
+	watchers   *WatchManager
+	leaseMgr   *LeaseManager
+	currentRev int64
 }
 
 type WatchManager struct {
 	watchMu  sync.Mutex
 	watchers map[string]map[uint64]*watcherInfo // key -> watcherID -> watcherInfo
 	nextID   uint64
+	eventLog []kv.WatchEvent // 历史事件日志（简单版）
 }
 
 type watcherInfo struct {
@@ -43,6 +45,7 @@ type watcherInfo struct {
 	prevValue  string
 	persistent bool  // 是否持续监听
 	expireAt   int64 // 超时时间戳 (unix nano)
+	fromRev    int64 // 从哪个 revision 开始监听
 }
 
 type Watcher struct {
@@ -281,18 +284,19 @@ func NewServer(
 	httpAddr string,
 ) *Server {
 	s := &Server{
-		store:    kv.NewKVStore(),
-		id:       id,
-		addr:     raftAddr,
-		peers:    peers,
-		applyCh:  make(chan raft.ApplyMsg, 100),
-		wal:      wal,
-		snapshot: snapshot,
-		replyCh:  make(map[int]chan interface{}),
-		rpcAddr:  rpcAddr,
-		httpAddr: httpAddr,
-		watchers: NewWatchManager(),
-		leaseMgr: NewLeaseManager(),
+		store:      kv.NewKVStore(),
+		id:         id,
+		addr:       raftAddr,
+		peers:      peers,
+		applyCh:    make(chan raft.ApplyMsg, 100),
+		wal:        wal,
+		snapshot:   snapshot,
+		replyCh:    make(map[int]chan interface{}),
+		rpcAddr:    rpcAddr,
+		httpAddr:   httpAddr,
+		watchers:   NewWatchManager(),
+		leaseMgr:   NewLeaseManager(),
+		currentRev: 0,
 	}
 
 	// 创建Raft实例，mock Persister和peers
@@ -323,14 +327,15 @@ func NewWatchManager() *WatchManager {
 // 添加watcher
 // persistent: 是否持续监听 (触发后不删除)
 // timeout: 超时时间 (0 表示不过期)
-func (wa *WatchManager) AddWatcher(key string, persistent bool, timeout time.Duration) *Watcher {
+// fromRev: 从哪个 revision 开始监听 (0 表示从当前最新)
+func (wa *WatchManager) AddWatcher(key string, persistent bool, timeout time.Duration, fromRev int64) *Watcher {
 	wa.watchMu.Lock()
 	defer wa.watchMu.Unlock()
 
 	wa.nextID++
 	id := wa.nextID
 
-	ch := make(chan Event, 10)
+	ch := make(chan Event, 100)
 	cancelCh := make(chan struct{})
 
 	expireAt := int64(0)
@@ -343,6 +348,7 @@ func (wa *WatchManager) AddWatcher(key string, persistent bool, timeout time.Dur
 		ch:         ch,
 		persistent: persistent,
 		expireAt:   expireAt,
+		fromRev:    fromRev,
 	}
 
 	if wa.watchers[key] == nil {
@@ -406,7 +412,16 @@ func (s *Server) notifyWatchers(cmd kv.Command) {
 		Type:  eventType,
 	}
 
+	// 记录历史事件（包括 revision）
+	watchEvent := kv.WatchEvent{
+		Key:      cmd.Key,
+		Value:    cmd.Value,
+		Type:     eventType,
+		Revision: cmd.Revision,
+	}
 	s.watchers.watchMu.Lock()
+	s.watchers.eventLog = append(s.watchers.eventLog, watchEvent)
+
 	watchers, ok := s.watchers.watchers[cmd.Key]
 	if !ok {
 		s.watchers.watchMu.Unlock()
@@ -414,6 +429,23 @@ func (s *Server) notifyWatchers(cmd kv.Command) {
 	}
 
 	for id, info := range watchers {
+		// 补发历史事件
+		if info.fromRev > 0 {
+			for _, ev := range s.watchers.eventLog {
+				if ev.Key == cmd.Key && ev.Revision >= info.fromRev && ev.Revision < cmd.Revision {
+					histEvent := Event{
+						Key:   ev.Key,
+						Value: ev.Value,
+						Type:  ev.Type,
+					}
+					select {
+					case info.ch <- histEvent:
+					default:
+					}
+				}
+			}
+		}
+
 		select {
 		case info.ch <- event:
 			if !info.persistent {
@@ -476,11 +508,13 @@ func (s *Server) applyLoop() {
 		if !ok {
 			if m, isMap := msg.Command.(map[string]interface{}); isMap {
 				cmd = kv.Command{
-					Key:     toString(m["Key"]),
-					Value:   toString(m["Value"]),
-					LeaseID: toInt64(m["LeaseID"]),
-					TTL:     toInt64(m["TTL"]),
-					Type:    kv.CommandType(toInt(m["Type"])),
+					Key:       toString(m["Key"]),
+					Value:     toString(m["Value"]),
+					LeaseID:   toInt64(m["LeaseID"]),
+					TTL:       toInt64(m["TTL"]),
+					Type:      kv.CommandType(toInt(m["Type"])),
+					Revision:  toInt64(m["Revision"]),
+					Tombstone: toBool(m["Tombstone"]),
 				}
 				ok = true
 			}
@@ -489,6 +523,13 @@ func (s *Server) applyLoop() {
 			s.mu.Unlock()
 			continue
 		}
+
+		// 增加全局 revision 并设置到命令中（写操作）
+		if cmd.Type == kv.CmdPut || cmd.Type == kv.CmdDelete || cmd.Type == kv.CmdCAS || cmd.Type == kv.CmdLeaseAttach {
+			s.currentRev++
+			cmd.Revision = s.currentRev
+		}
+
 		if s.wal != nil {
 			s.wal.WriteEntry(cmd)
 		}
@@ -507,7 +548,8 @@ func (s *Server) applyLoop() {
 			if leaseId > 0 {
 				keys := s.leaseMgr.RevokeLease(leaseId)
 				for _, key := range keys {
-					deleteCmd := kv.Command{Type: kv.CmdDelete, Key: key}
+					s.currentRev++
+					deleteCmd := kv.Command{Type: kv.CmdDelete, Key: key, Revision: s.currentRev}
 					s.store.Apply(deleteCmd)
 					s.notifyWatchers(deleteCmd)
 				}
@@ -531,9 +573,19 @@ func (s *Server) applyLoop() {
 			if cmd.LeaseID > 0 {
 				s.leaseMgr.Attach(cmd.LeaseID, cmd.Key, cmd.Value)
 				s.store.SetKeyLease(cmd.Key, cmd.LeaseID)
-				s.store.Put(cmd.Key, cmd.Value)
+				// 使用 Apply 来确保 MVCC 正确记录版本
+				cmd.Type = kv.CmdPut
+				result, _ = s.store.Apply(cmd)
 			}
 			result = "OK"
+
+		case kv.CmdCAS:
+			result, _ = s.store.Apply(cmd)
+			if result == "OK" {
+				// CAS 成功，通知 watchers
+				cmd.Type = kv.CmdPut // 转换为 Put 事件通知
+				s.notifyWatchers(cmd)
+			}
 
 		default:
 			result, _ = s.store.Apply(cmd)
@@ -584,6 +636,20 @@ func toInt(v interface{}) int {
 		return int(val)
 	}
 	return 0
+}
+
+func toBool(v interface{}) bool {
+	switch val := v.(type) {
+	case bool:
+		return val
+	case float64:
+		return val != 0
+	case int:
+		return val != 0
+	case int64:
+		return val != 0
+	}
+	return false
 }
 
 func (s *Server) notifyReply(cmdIdx int, result interface{}) {

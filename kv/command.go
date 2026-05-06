@@ -10,12 +10,16 @@ const (
 	CmdLeaseRevoke
 	CmdLeaseAttach
 	CmdLeaseKeepAlive
+	CmdCAS
 )
 
 type Command struct {
-	Type    CommandType
-	Key     string
-	Value   string
-	LeaseID int64
-	TTL    int64
+	Type        CommandType
+	Key         string
+	Value       string
+	LeaseID     int64
+	TTL         int64
+	Revision    int64
+	Tombstone   bool
+	ExpectedRev int64
 }

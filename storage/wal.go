@@ -84,7 +84,6 @@ func (w *WAL) ReadEntries() ([]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	entries := []interface{}{}
 	lines := strings.Split(string(data), "\n")
 	for _, line := range lines {
