@@ -26,8 +26,9 @@ type APIResponse struct {
 
 // PutRequest for RPC
 type PutRequest struct {
-	Key   string
-	Value string
+	Key     string
+	Value   string
+	LeaseID int64
 }
 
 type PutResponse struct {
@@ -77,9 +78,10 @@ type WatchEvent struct {
 // RPC: Put
 func (h *Handler) Put(req *PutRequest, resp *PutResponse) error {
 	cmd := kv.Command{
-		Type:  kv.CmdPut,
-		Key:   req.Key,
-		Value: req.Value,
+		Type:    kv.CmdPut,
+		Key:     req.Key,
+		Value:   req.Value,
+		LeaseID: req.LeaseID,
 	}
 	_, err := h.s.Submit(cmd)
 	resp.Ok = (err == nil)
@@ -132,6 +134,7 @@ func (h *HTTPHandler) Put(w http.ResponseWriter, r *http.Request) {
 
 	key := r.URL.Query().Get("key")
 	value := r.URL.Query().Get("value")
+	leaseIdStr := r.URL.Query().Get("lease_id")
 
 	if key == "" || value == "" {
 		w.Header().Set("Content-Type", "application/json")
@@ -139,11 +142,18 @@ func (h *HTTPHandler) Put(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"ok":false,"error":"key and value required"}`)
 		return
 	}
-	log.Printf("key is %s,value is %s", key, value)
+
+	var leaseId int64
+	if leaseIdStr != "" {
+		fmt.Sscanf(leaseIdStr, "%d", &leaseId)
+	}
+
+	log.Printf("key is %s,value is %s, lease_id is %d", key, value, leaseId)
 	cmd := kv.Command{
-		Type:  kv.CmdPut,
-		Key:   key,
-		Value: value,
+		Type:    kv.CmdPut,
+		Key:     key,
+		Value:   value,
+		LeaseID: leaseId,
 	}
 
 	_, err := h.server.Submit(cmd)
@@ -454,4 +464,216 @@ func (h *HTTPHandler) LeaseAttach(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, `{"ok":true}`)
+}
+
+func (h *HTTPHandler) LockAcquire(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost && r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	key := r.URL.Query().Get("key")
+	ownerID := r.URL.Query().Get("owner_id")
+	ttlStr := r.URL.Query().Get("ttl")
+
+	if key == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"ok":false,"error":"key required"}`)
+		return
+	}
+
+	if ownerID == "" {
+		ownerID = fmt.Sprintf("client-%d", time.Now().UnixNano())
+	}
+
+	var ttl int64 = 10
+	if ttlStr != "" {
+		fmt.Sscanf(ttlStr, "%d", &ttl)
+	}
+
+	handle, err := h.server.lockMgr.Acquire(key, ttl, ownerID)
+	w.Header().Set("Content-Type", "application/json")
+	if err != nil {
+		w.WriteHeader(http.StatusConflict)
+		fmt.Fprintf(w, `{"ok":false,"error":"%s"}`, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, FormatLockResponse(handle, nil))
+}
+
+func (h *HTTPHandler) LockRelease(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete && r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	key := r.URL.Query().Get("key")
+	leaseIdStr := r.URL.Query().Get("lease_id")
+	ownerID := r.URL.Query().Get("owner_id")
+
+	if key == "" || leaseIdStr == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"ok":false,"error":"key and lease_id required"}`)
+		return
+	}
+
+	var leaseID int64
+	fmt.Sscanf(leaseIdStr, "%d", &leaseID)
+
+	err := h.server.lockMgr.Release(key, leaseID, ownerID)
+	w.Header().Set("Content-Type", "application/json")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"ok":false,"error":"%s"}`, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"ok":true}`)
+}
+
+func (h *HTTPHandler) LockKeepAlive(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut && r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	key := r.URL.Query().Get("key")
+	leaseIdStr := r.URL.Query().Get("lease_id")
+	ownerID := r.URL.Query().Get("owner_id")
+	ttlStr := r.URL.Query().Get("ttl")
+
+	if key == "" || leaseIdStr == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"ok":false,"error":"key and lease_id required"}`)
+		return
+	}
+
+	var leaseID int64
+	fmt.Sscanf(leaseIdStr, "%d", &leaseID)
+
+	var ttl int64 = 10
+	if ttlStr != "" {
+		fmt.Sscanf(ttlStr, "%d", &ttl)
+	}
+
+	err := h.server.lockMgr.KeepAlive(key, leaseID, ownerID, ttl)
+	w.Header().Set("Content-Type", "application/json")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"ok":false,"error":"%s"}`, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"ok":true}`)
+}
+
+func (h *HTTPHandler) LockStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	key := r.URL.Query().Get("key")
+	if key == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"ok":false,"error":"key required"}`)
+		return
+	}
+
+	locked, leaseID := h.server.lockMgr.GetLockStatus(key)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"ok":true,"locked":%t,"lease_id":%d}`, locked, leaseID)
+}
+
+func (h *HTTPHandler) WatchPrefix(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if !h.server.IsLeader() {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		fmt.Fprintf(w, `{"ok":false,"error":"watch only supported on leader"}`)
+		return
+	}
+
+	prefix := r.URL.Query().Get("prefix")
+	if prefix == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"ok":false,"error":"prefix required"}`)
+		return
+	}
+
+	persistent := r.URL.Query().Get("persistent") == "true"
+	timeout := r.URL.Query().Get("timeout")
+	fromRevStr := r.URL.Query().Get("from_rev")
+	fromRev := int64(0)
+	fmt.Sscanf(fromRevStr, "%d", &fromRev)
+
+	var timeoutDur time.Duration
+	if timeout != "" {
+		var timeoutMs int64
+		fmt.Sscanf(timeout, "%d", &timeoutMs)
+		timeoutDur = time.Duration(timeoutMs) * time.Millisecond
+	}
+
+	watcher := h.server.watchers.AddPrefixWatcher(prefix, persistent, timeoutDur, fromRev)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"ok":true,"watcher_id":%d,"prefix":"%s"}`, watcher.ID, prefix)
+}
+
+func (h *HTTPHandler) DeletePrefix(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete && r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	prefix := r.URL.Query().Get("prefix")
+	if prefix == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"ok":false,"error":"prefix required"}`)
+		return
+	}
+
+	cmd := kv.Command{Type: kv.CmdDeletePrefix, Prefix: prefix}
+	result, err := h.server.Submit(cmd)
+	w.Header().Set("Content-Type", "application/json")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"ok":false,"error":"%s"}`, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"ok":true,"deleted":%s}`, result)
+}
+
+func (h *HTTPHandler) GetPrefix(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	prefix := r.URL.Query().Get("prefix")
+	if prefix == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"ok":false,"error":"prefix required"}`)
+		return
+	}
+
+	resultMap := h.server.GetPrefix(prefix)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"ok":true,"keys":%v}`, resultMap)
 }

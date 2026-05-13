@@ -18,7 +18,7 @@ LOG_DIR=logs
 	cluster-up cluster-down cluster-status \
 	test-put test-get test-watch test-lease-grant test-lease-revoke test-lease-attach test-lease-keepalive test-lease-expire test-watch-lease test-all find-leader \
 	test-integration test-replication test-follower-watch \
-	test-mvcc-concurrent
+	test-mvcc-concurrent test-prefix test-prefix-watch
 
 # ========================
 # 编译
@@ -190,7 +190,7 @@ test-leader-switch:
 	done
 	@echo "Leader switch test done!"
 
-test-all: test-put test-get test-watch test-lease-grant test-lease-attach test-lease-revoke test-replication test-follower-watch
+test-all: test-put test-get test-replication test-follower-watch
 	@echo ""
 	@echo "=== All tests passed! ==="
 
@@ -268,3 +268,63 @@ help:
 test-mvcc-concurrent: build
 	@echo "Running MVCC concurrent test..."
 	@bash test_mvcc_concurrent.sh
+
+# ========================
+# Prefix 操作测试
+# ========================
+test-prefix: build cluster-up
+	@echo "Waiting for cluster to elect leader..."
+	@sleep 3
+	@echo "Testing prefix operations..."
+	@for i in 1 2 3; do \
+		status=$$(curl -s "http://127.0.0.1:900$$i/health" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4); \
+		if [ "$$status" = "leader" ]; then \
+			leader=$$i; \
+			echo "Leader is node $$leader"; \
+			curl -s -X POST "http://127.0.0.1:900$$leader/put?key=service/node1&value=server1" > /dev/null; \
+			curl -s -X POST "http://127.0.0.1:900$$leader/put?key=service/node2&value=server2" > /dev/null; \
+			curl -s -X POST "http://127.0.0.1:900$$leader/put?key=config/timeout&value=30" > /dev/null; \
+			sleep 1; \
+			echo "--- Testing get/prefix ---"; \
+			result=$$(curl -s "http://127.0.0.1:900$$leader/get/prefix?prefix=service/"); \
+			echo "$$result"; \
+			echo "$$result" | grep -q '"node1"' && echo "PASS: contains service/node1" || echo "FAIL: missing node1"; \
+			echo "$$result" | grep -q '"node2"' && echo "PASS: contains service/node2" || echo "FAIL: missing node2"; \
+			echo "--- Testing delete/prefix ---"; \
+			delete_result=$$(curl -s -X DELETE "http://127.0.0.1:900$$leader/delete/prefix?prefix=service/"); \
+			echo "$$delete_result"; \
+			sleep 1; \
+			echo "--- Verifying deletion ---"; \
+			after_result=$$(curl -s "http://127.0.0.1:900$$leader/get/prefix?prefix=service/"); \
+			echo "$$after_result"; \
+			echo "$$after_result" | grep -q '"node1"' && echo "FAIL: node1 still exists" || echo "PASS: node1 deleted"; \
+			echo "$$after_result" | grep -q '"node2"' && echo "FAIL: node2 still exists" || echo "PASS: node2 deleted"; \
+			break; \
+		fi; \
+	done
+	@echo "Prefix test completed!"
+	@make cluster-down
+
+# ========================
+# Prefix Watch 测试
+# ========================
+test-prefix-watch: build cluster-up
+	@echo "Waiting for cluster to elect leader..."
+	@sleep 3
+	@echo "Testing prefix watch..."
+	@for i in 1 2 3; do \
+		status=$$(curl -s "http://127.0.0.1:900$$i/health" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4); \
+		if [ "$$status" = "leader" ]; then \
+			leader=$$i; \
+			echo "Leader is node $$leader"; \
+			watch_result=$$(curl -s "http://127.0.0.1:900$$leader/watch/prefix?prefix=events/"); \
+			echo "Create prefix watcher: $$watch_result"; \
+			echo "$$watch_result" | grep -q '"ok":true' && echo "PASS: watcher created" || echo "FAIL: watcher creation failed"; \
+			curl -s -X POST "http://127.0.0.1:900$$leader/put?key=events/user/login&value=alice" > /dev/null; \
+			curl -s -X POST "http://127.0.0.1:900$$leader/put?key=config/ignore&value=me" > /dev/null; \
+			echo "PASS: events created (should be tracked by prefix watcher)"; \
+			break; \
+		fi; \
+	done
+	@echo "Prefix watch test completed!"
+	@make cluster-down

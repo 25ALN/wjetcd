@@ -29,14 +29,16 @@ type Server struct {
 	httpAddr   string
 	watchers   *WatchManager
 	leaseMgr   *LeaseManager
+	lockMgr    *LockManager
 	currentRev int64
 }
 
 type WatchManager struct {
-	watchMu  sync.Mutex
-	watchers map[string]map[uint64]*watcherInfo // key -> watcherID -> watcherInfo
-	nextID   uint64
-	eventLog []kv.WatchEvent // 历史事件日志（简单版）
+	watchMu      sync.Mutex
+	watchers     map[string]map[uint64]*watcherInfo    // exact key -> watcherID -> watcherInfo
+	prefixWatchers map[string]map[uint64]*watcherInfo // prefix -> watcherID -> watcherInfo
+	nextID       uint64
+	eventLog     []kv.WatchEvent // 历史事件日志（简单版）
 }
 
 type watcherInfo struct {
@@ -56,9 +58,10 @@ type Watcher struct {
 }
 
 type Event struct {
-	Key   string
-	Value string
-	Type  string
+	Key      string
+	Value    string
+	Type     string
+	Revision int64
 }
 
 type Lease struct {
@@ -299,6 +302,9 @@ func NewServer(
 		currentRev: 0,
 	}
 
+	// 初始化分布式锁管理器
+	s.lockMgr = NewLockManager(s.leaseMgr, s.store)
+
 	// 创建Raft实例，mock Persister和peers
 	persister := raft.MakePersister()
 	s.rf = raft.Make(peers, id, persister, s.applyCh)
@@ -320,15 +326,22 @@ func NewServer(
 
 func NewWatchManager() *WatchManager {
 	return &WatchManager{
-		watchers: make(map[string]map[uint64]*watcherInfo),
+		watchers:       make(map[string]map[uint64]*watcherInfo),
+		prefixWatchers: make(map[string]map[uint64]*watcherInfo),
 	}
 }
 
-// 添加watcher
-// persistent: 是否持续监听 (触发后不删除)
-// timeout: 超时时间 (0 表示不过期)
-// fromRev: 从哪个 revision 开始监听 (0 表示从当前最新)
+// 添加普通 watcher
 func (wa *WatchManager) AddWatcher(key string, persistent bool, timeout time.Duration, fromRev int64) *Watcher {
+	return wa.addWatcherInternal(key, "", persistent, timeout, fromRev)
+}
+
+// 添加 prefix watcher
+func (wa *WatchManager) AddPrefixWatcher(prefix string, persistent bool, timeout time.Duration, fromRev int64) *Watcher {
+	return wa.addWatcherInternal("", prefix, persistent, timeout, fromRev)
+}
+
+func (wa *WatchManager) addWatcherInternal(key string, prefix string, persistent bool, timeout time.Duration, fromRev int64) *Watcher {
 	wa.watchMu.Lock()
 	defer wa.watchMu.Unlock()
 
@@ -351,10 +364,17 @@ func (wa *WatchManager) AddWatcher(key string, persistent bool, timeout time.Dur
 		fromRev:    fromRev,
 	}
 
-	if wa.watchers[key] == nil {
-		wa.watchers[key] = make(map[uint64]*watcherInfo)
+	if prefix != "" {
+		if wa.prefixWatchers[prefix] == nil {
+			wa.prefixWatchers[prefix] = make(map[uint64]*watcherInfo)
+		}
+		wa.prefixWatchers[prefix][id] = info
+	} else {
+		if wa.watchers[key] == nil {
+			wa.watchers[key] = make(map[uint64]*watcherInfo)
+		}
+		wa.watchers[key][id] = info
 	}
-	wa.watchers[key][id] = info
 
 	return &Watcher{
 		Key:    key,
@@ -369,6 +389,18 @@ func (wa *WatchManager) RemoveWatcher(key string, id uint64) {
 	wa.watchMu.Lock()
 	defer wa.watchMu.Unlock()
 	if watchers, ok := wa.watchers[key]; ok {
+		if info, ok := watchers[id]; ok {
+			close(info.ch)
+			delete(watchers, id)
+		}
+	}
+}
+
+// 取消 prefix watcher
+func (wa *WatchManager) RemovePrefixWatcher(prefix string, id uint64) {
+	wa.watchMu.Lock()
+	defer wa.watchMu.Unlock()
+	if watchers, ok := wa.prefixWatchers[prefix]; ok {
 		if info, ok := watchers[id]; ok {
 			close(info.ch)
 			delete(watchers, id)
@@ -400,19 +432,19 @@ func (s *Server) notifyWatchers(cmd kv.Command) {
 	switch cmd.Type {
 	case kv.CmdPut:
 		eventType = "PUT"
-	case kv.CmdDelete:
+	case kv.CmdDelete, kv.CmdDeletePrefix:
 		eventType = "DELETE"
 	default:
 		return
 	}
 
 	event := Event{
-		Key:   cmd.Key,
-		Value: cmd.Value,
-		Type:  eventType,
+		Key:      cmd.Key,
+		Value:    cmd.Value,
+		Type:     eventType,
+		Revision: cmd.Revision,
 	}
 
-	// 记录历史事件（包括 revision）
 	watchEvent := kv.WatchEvent{
 		Key:      cmd.Key,
 		Value:    cmd.Value,
@@ -422,17 +454,22 @@ func (s *Server) notifyWatchers(cmd kv.Command) {
 	s.watchers.watchMu.Lock()
 	s.watchers.eventLog = append(s.watchers.eventLog, watchEvent)
 
-	watchers, ok := s.watchers.watchers[cmd.Key]
+	s.notifyExactWatchers(cmd.Key, event)
+	s.notifyPrefixWatchers(cmd.Key, event)
+
+	s.watchers.watchMu.Unlock()
+}
+
+func (s *Server) notifyExactWatchers(key string, event Event) {
+	watchers, ok := s.watchers.watchers[key]
 	if !ok {
-		s.watchers.watchMu.Unlock()
 		return
 	}
 
 	for id, info := range watchers {
-		// 补发历史事件
 		if info.fromRev > 0 {
 			for _, ev := range s.watchers.eventLog {
-				if ev.Key == cmd.Key && ev.Revision >= info.fromRev && ev.Revision < cmd.Revision {
+				if ev.Key == key && ev.Revision >= info.fromRev && ev.Revision < event.Revision {
 					histEvent := Event{
 						Key:   ev.Key,
 						Value: ev.Value,
@@ -457,9 +494,48 @@ func (s *Server) notifyWatchers(cmd kv.Command) {
 	}
 
 	if len(watchers) == 0 {
-		delete(s.watchers.watchers, cmd.Key)
+		delete(s.watchers.watchers, key)
 	}
-	s.watchers.watchMu.Unlock()
+}
+
+func (s *Server) notifyPrefixWatchers(key string, event Event) {
+	for prefix, watchers := range s.watchers.prefixWatchers {
+		if len(prefix) == 0 || (len(key) >= len(prefix) && key[:len(prefix)] == prefix) {
+			for id, info := range watchers {
+				if info.fromRev > 0 {
+					for _, ev := range s.watchers.eventLog {
+						if ev.Revision >= info.fromRev && ev.Revision < event.Revision {
+							prefixMatch := len(prefix) == 0 || (len(ev.Key) >= len(prefix) && ev.Key[:len(prefix)] == prefix)
+							if prefixMatch {
+								histEvent := Event{
+									Key:   ev.Key,
+									Value: ev.Value,
+									Type:  ev.Type,
+								}
+								select {
+								case info.ch <- histEvent:
+								default:
+								}
+							}
+						}
+					}
+				}
+
+				select {
+				case info.ch <- event:
+					if !info.persistent {
+						close(info.ch)
+						delete(watchers, id)
+					}
+				default:
+				}
+			}
+
+			if len(watchers) == 0 {
+				delete(s.watchers.prefixWatchers, prefix)
+			}
+		}
+	}
 }
 
 func (s *Server) CancelWatcher(key string, id uint64) {
@@ -490,6 +566,7 @@ func (s *Server) cleanupExpiredLeases() {
 			s.store.Apply(cmd)
 			s.notifyWatchers(cmd)
 		}
+		// 同步更新本地 currentRev
 		s.mu.Unlock()
 	}
 }
@@ -526,6 +603,12 @@ func (s *Server) applyLoop() {
 
 		// 增加全局 revision 并设置到命令中（写操作）
 		if cmd.Type == kv.CmdPut || cmd.Type == kv.CmdDelete || cmd.Type == kv.CmdCAS || cmd.Type == kv.CmdLeaseAttach {
+			s.currentRev++
+			cmd.Revision = s.currentRev
+		}
+
+		// CmdDeletePrefix 需要单独处理 revision
+		if cmd.Type == kv.CmdDeletePrefix {
 			s.currentRev++
 			cmd.Revision = s.currentRev
 		}
@@ -578,21 +661,55 @@ func (s *Server) applyLoop() {
 				result, _ = s.store.Apply(cmd)
 			}
 			result = "OK"
-
+			//
 		case kv.CmdCAS:
 			result, _ = s.store.Apply(cmd)
 			if result == "OK" {
-				// CAS 成功，通知 watchers
-				cmd.Type = kv.CmdPut // 转换为 Put 事件通知
+				cmd.Type = kv.CmdPut
 				s.notifyWatchers(cmd)
 			}
 
+		case kv.CmdDeletePrefix:
+			deletedKeys := s.store.DeletePrefix(cmd.Prefix)
+			for _, key := range deletedKeys {
+				deleteCmd := kv.Command{Type: kv.CmdDelete, Key: key, Revision: s.currentRev}
+				s.notifyWatchers(deleteCmd)
+			}
+			result = fmt.Sprintf("%d", len(deletedKeys))
+			cmdIdx = msg.CommandIndex
+			s.notifyReply(cmdIdx, result)
+			s.mu.Unlock()
+			s.mu.Lock()
+			if msg.CommandIndex > s.rf.LastApplied {
+				s.rf.LastApplied = msg.CommandIndex
+			}
+			s.mu.Unlock()
+			continue
+
+		case kv.CmdGetPrefix:
+			resultMap := s.store.GetPrefix(cmd.Prefix)
+			result = fmt.Sprintf("%v", resultMap)
+			cmdIdx = msg.CommandIndex
+			s.notifyReply(cmdIdx, result)
+			s.mu.Unlock()
+			s.mu.Lock()
+			if msg.CommandIndex > s.rf.LastApplied {
+				s.rf.LastApplied = msg.CommandIndex
+			}
+			s.mu.Unlock()
+			continue
+
 		default:
 			result, _ = s.store.Apply(cmd)
+			// 自动关联 LeaseID
+			if cmd.LeaseID > 0 && cmd.Type == kv.CmdPut {
+				s.leaseMgr.Attach(cmd.LeaseID, cmd.Key, cmd.Value)
+				s.store.SetKeyLease(cmd.Key, cmd.LeaseID)
+			}
+			s.notifyWatchers(cmd)
 		}
 
 		cmdIdx = msg.CommandIndex
-		s.notifyWatchers(cmd)
 		s.mu.Unlock()
 
 		if cmdIdx >= 0 {
@@ -702,6 +819,13 @@ func (s *Server) Get(key string) string {
 	return s.store.Get(key)
 }
 
+// GetPrefix 本地读取（无需经过 Raft）
+func (s *Server) GetPrefix(prefix string) map[string]string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.store.GetPrefix(prefix)
+}
+
 // Leader检测
 func (s *Server) IsLeader() bool {
 	return s.rf.State == raft.Leader
@@ -732,6 +856,13 @@ func (s *Server) StartHTTPServer() error {
 	mux.HandleFunc("/lease/revoke", handler.LeaseRevoke)
 	mux.HandleFunc("/lease/keepalive", handler.LeaseKeepAlive)
 	mux.HandleFunc("/lease/attach", handler.LeaseAttach)
+	mux.HandleFunc("/lock/acquire", handler.LockAcquire)
+	mux.HandleFunc("/lock/release", handler.LockRelease)
+	mux.HandleFunc("/lock/keepalive", handler.LockKeepAlive)
+	mux.HandleFunc("/lock/status", handler.LockStatus)
+	mux.HandleFunc("/watch/prefix", handler.WatchPrefix)
+	mux.HandleFunc("/delete/prefix", handler.DeletePrefix)
+	mux.HandleFunc("/get/prefix", handler.GetPrefix)
 	return http.ListenAndServe(s.httpAddr, mux)
 }
 

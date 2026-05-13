@@ -251,3 +251,63 @@ func (kv *KVStore) GetHistory(key string) []*VersionEntry {
 	copy(result, entries)
 	return result
 }
+
+// GetPrefix 获取指定前缀的所有键值对
+func (kv *KVStore) GetPrefix(prefix string) map[string]string {
+	kv.mu.RLock()
+	defer kv.mu.RUnlock()
+
+	result := make(map[string]string)
+	for key, entries := range kv.data {
+		if len(prefix) == 0 || len(key) >= len(prefix) && key[:len(prefix)] == prefix {
+			if len(entries) > 0 {
+				latest := entries[len(entries)-1]
+				if !latest.Tombstone {
+					result[key] = latest.Value
+				}
+			}
+		}
+	}
+	return result
+}
+
+// DeletePrefix 删除指定前缀的所有键（返回被删除的 key 列表）
+func (kv *KVStore) DeletePrefix(prefix string) []string {
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+
+	var deletedKeys []string
+	for key := range kv.data {
+		if len(prefix) == 0 || len(key) >= len(prefix) && key[:len(prefix)] == prefix {
+			kv.currentRev++
+			entry := &VersionEntry{
+				Revision:  kv.currentRev,
+				Value:     "",
+				Tombstone: true,
+			}
+			kv.data[key] = append(kv.data[key], entry)
+			delete(kv.key2Lease, key)
+			deletedKeys = append(deletedKeys, key)
+		}
+	}
+	return deletedKeys
+}
+
+// KeysWithPrefix 获取所有匹配前缀的 key（不包含已删除的）
+func (kv *KVStore) KeysWithPrefix(prefix string) []string {
+	kv.mu.RLock()
+	defer kv.mu.RUnlock()
+
+	keys := make([]string, 0)
+	for key, entries := range kv.data {
+		if len(prefix) == 0 || len(key) >= len(prefix) && key[:len(prefix)] == prefix {
+			if len(entries) > 0 {
+				latest := entries[len(entries)-1]
+				if !latest.Tombstone {
+					keys = append(keys, key)
+				}
+			}
+		}
+	}
+	return keys
+}

@@ -11,6 +11,8 @@ const (
 	CmdLeaseAttach
 	CmdLeaseKeepAlive
 	CmdCAS
+	CmdDeletePrefix
+	CmdGetPrefix
 )
 
 type Command struct {
@@ -22,4 +24,5 @@ type Command struct {
 	Revision    int64
 	Tombstone   bool
 	ExpectedRev int64
+	Prefix      string
 }
