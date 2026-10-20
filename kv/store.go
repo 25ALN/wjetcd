@@ -1,10 +1,20 @@
 package kv
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
+	"sort"
 	"sync"
 )
+
+// storeSnapshot is the on-disk representation of the MVCC state. It is kept
+// private so callers cannot mutate the live store through a snapshot value.
+type storeSnapshot struct {
+	Data       map[string][]VersionEntry `json:"data"`
+	Key2Lease  map[string]int64          `json:"key2_lease"`
+	CurrentRev int64                     `json:"current_revision"`
+}
 
 type VersionEntry struct {
 	Revision  int64
@@ -71,6 +81,8 @@ func (kv *KVStore) Apply(cmd Command) (string, error) {
 		if rev == 0 {
 			kv.currentRev++
 			rev = kv.currentRev
+		} else if rev > kv.currentRev {
+			kv.currentRev = rev
 		}
 		entry := &VersionEntry{
 			Revision:  rev,
@@ -80,6 +92,8 @@ func (kv *KVStore) Apply(cmd Command) (string, error) {
 		kv.data[cmd.Key] = append(kv.data[cmd.Key], entry)
 		if cmd.LeaseID > 0 {
 			kv.key2Lease[cmd.Key] = cmd.LeaseID
+		} else {
+			delete(kv.key2Lease, cmd.Key)
 		}
 		return "", nil
 
@@ -92,6 +106,8 @@ func (kv *KVStore) Apply(cmd Command) (string, error) {
 		if rev == 0 {
 			kv.currentRev++
 			rev = kv.currentRev
+		} else if rev > kv.currentRev {
+			kv.currentRev = rev
 		}
 		entry := &VersionEntry{
 			Revision:  rev,
@@ -109,8 +125,13 @@ func (kv *KVStore) Apply(cmd Command) (string, error) {
 			latest = entries[len(entries)-1]
 		}
 		if latest != nil && !latest.Tombstone && latest.Revision == cmd.ExpectedRev {
-			kv.currentRev++
-			rev := kv.currentRev
+			rev := cmd.Revision
+			if rev == 0 {
+				kv.currentRev++
+				rev = kv.currentRev
+			} else if rev > kv.currentRev {
+				kv.currentRev = rev
+			}
 			entry := &VersionEntry{
 				Revision:  rev,
 				Value:     cmd.Value,
@@ -124,8 +145,13 @@ func (kv *KVStore) Apply(cmd Command) (string, error) {
 	case CmdLeaseAttach:
 		if cmd.LeaseID > 0 {
 			kv.key2Lease[cmd.Key] = cmd.LeaseID
-			kv.currentRev++
-			rev := kv.currentRev
+			rev := cmd.Revision
+			if rev == 0 {
+				kv.currentRev++
+				rev = kv.currentRev
+			} else if rev > kv.currentRev {
+				kv.currentRev = rev
+			}
 			entry := &VersionEntry{
 				Revision:  rev,
 				Value:     cmd.Value,
@@ -279,16 +305,19 @@ func (kv *KVStore) DeletePrefix(prefix string) []string {
 	var deletedKeys []string
 	for key := range kv.data {
 		if len(prefix) == 0 || len(key) >= len(prefix) && key[:len(prefix)] == prefix {
-			kv.currentRev++
-			entry := &VersionEntry{
-				Revision:  kv.currentRev,
-				Value:     "",
-				Tombstone: true,
-			}
-			kv.data[key] = append(kv.data[key], entry)
-			delete(kv.key2Lease, key)
 			deletedKeys = append(deletedKeys, key)
 		}
+	}
+	sort.Strings(deletedKeys)
+	for _, key := range deletedKeys {
+		kv.currentRev++
+		entry := &VersionEntry{
+			Revision:  kv.currentRev,
+			Value:     "",
+			Tombstone: true,
+		}
+		kv.data[key] = append(kv.data[key], entry)
+		delete(kv.key2Lease, key)
 	}
 	return deletedKeys
 }
@@ -310,4 +339,65 @@ func (kv *KVStore) KeysWithPrefix(prefix string) []string {
 		}
 	}
 	return keys
+}
+
+// Snapshot returns a complete, self-contained copy of the MVCC state.
+func (kv *KVStore) Snapshot() ([]byte, error) {
+	kv.mu.RLock()
+	defer kv.mu.RUnlock()
+
+	s := storeSnapshot{
+		Data:       make(map[string][]VersionEntry, len(kv.data)),
+		Key2Lease:  make(map[string]int64, len(kv.key2Lease)),
+		CurrentRev: kv.currentRev,
+	}
+	for key, entries := range kv.data {
+		versions := make([]VersionEntry, len(entries))
+		for i, entry := range entries {
+			if entry != nil {
+				versions[i] = *entry
+			}
+		}
+		s.Data[key] = versions
+	}
+	for key, leaseID := range kv.key2Lease {
+		s.Key2Lease[key] = leaseID
+	}
+	return json.Marshal(s)
+}
+
+// Restore replaces the MVCC state from a Snapshot produced by Snapshot.
+func (kv *KVStore) Restore(data []byte) error {
+	var s storeSnapshot
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	if s.Data == nil {
+		return fmt.Errorf("snapshot data field is missing or invalid")
+	}
+	if s.Key2Lease == nil {
+		return fmt.Errorf("snapshot key-to-lease field is missing or invalid")
+	}
+	for key, entries := range s.Data {
+		for _, entry := range entries {
+			if entry.Revision <= 0 || entry.Revision > s.CurrentRev {
+				return fmt.Errorf("invalid revision %d in snapshot key %q", entry.Revision, key)
+			}
+		}
+	}
+
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+	kv.data = make(map[string][]*VersionEntry, len(s.Data))
+	for key, entries := range s.Data {
+		versions := make([]*VersionEntry, len(entries))
+		for i := range entries {
+			entry := entries[i]
+			versions[i] = &entry
+		}
+		kv.data[key] = versions
+	}
+	kv.key2Lease = s.Key2Lease
+	kv.currentRev = s.CurrentRev
+	return nil
 }

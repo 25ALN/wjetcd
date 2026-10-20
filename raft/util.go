@@ -49,6 +49,7 @@ type ApplyHelper struct {
 	q             []ApplyMsg
 	mu            sync.Mutex
 	cond          *sync.Cond
+	done          chan struct{}
 	dead          int32
 }
 
@@ -57,6 +58,7 @@ func NewApplyHelper(applyCh chan ApplyMsg, lastApplied int) *ApplyHelper {
 		applyCh:       applyCh,
 		lastItemIndex: lastApplied,
 		q:             make([]ApplyMsg, 0),
+		done:          make(chan struct{}),
 	}
 	applyHelper.cond = sync.NewCond(&applyHelper.mu)
 	go applyHelper.applier()
@@ -65,13 +67,21 @@ func NewApplyHelper(applyCh chan ApplyMsg, lastApplied int) *ApplyHelper {
 
 func (applyHelper *ApplyHelper) Kill() {
 	atomic.StoreInt32(&applyHelper.dead, 1)
+	applyHelper.mu.Lock()
+	applyHelper.cond.Broadcast()
+	applyHelper.mu.Unlock()
+}
+
+func (applyHelper *ApplyHelper) Wait() {
+	<-applyHelper.done
 }
 func (applyHelper *ApplyHelper) killed() bool {
 	z := atomic.LoadInt32(&applyHelper.dead)
 	return z == 1
 }
 func (applyHelper *ApplyHelper) applier() {
-	for !applyHelper.killed() {
+	defer close(applyHelper.done)
+	for {
 		applyHelper.mu.Lock()
 		// if len(applyHelper.q) == 0 {
 		// 	applyHelper.cond.Wait()
@@ -79,7 +89,7 @@ func (applyHelper *ApplyHelper) applier() {
 		for len(applyHelper.q) == 0 && !applyHelper.killed() {
 			applyHelper.cond.Wait()
 		}
-		if applyHelper.killed() {
+		if len(applyHelper.q) == 0 && applyHelper.killed() {
 			applyHelper.mu.Unlock()
 			return
 		}

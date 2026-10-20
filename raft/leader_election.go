@@ -147,8 +147,12 @@ func (rf *Raft) HandleHeartbeatRPC(args *RequestAppendEntriesArgs, reply *Reques
 func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	rf.Mu.Lock()
 	defer rf.Mu.Unlock()
-	reply.VoteGranted = true // 默认设置响应体为投同意票状态
+	reply.VoteGranted = false
 	reply.Term = rf.CurrentTerm
+	if rf.killed() {
+		return
+	}
+	reply.VoteGranted = true // 默认设置响应体为投同意票状态
 	//竞选leader的节点任期小于等于自己的任期，则反对票(为什么等于情况也反对票呢？因为candidate节点在发送requestVote rpc之前会将自己的term+1)
 	if args.Term < rf.CurrentTerm {
 		reply.Term = rf.CurrentTerm

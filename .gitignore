@@ -1,0 +1,27 @@
+# 日志文件
+*.log
+*.log.*
+/logs/
+
+# 本地节点运行时数据
+*.wal
+*.snap
+
+# 测试文件与测试输出
+*_test.go
+*_test.sh
+test_*.sh
+*.test
+coverage.out
+test/
+tests/
+
+# 知识总结、复习笔记
+*知识*.md
+*总结*.md
+*复习*.md
+*笔记*.md
+/start_ways.md
+
+# 本地构建产物
+/bin/

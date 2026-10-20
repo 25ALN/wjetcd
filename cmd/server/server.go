@@ -4,7 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"testetcd/raft"
 	"testetcd/server"
@@ -34,13 +37,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create WAL: %v", err)
 	}
-	defer wal.Close()
 
 	snapshot, err := storage.NewSnapshot(fmt.Sprintf("node%d.snap", *id))
 	if err != nil {
 		log.Fatalf("Failed to create snapshot: %v", err)
 	}
-	defer snapshot.Close()
 	// 注册 peers
 
 	for i, addr := range peerList {
@@ -56,15 +57,25 @@ func main() {
 		*rpcAddr,
 		*httpAddr,
 	)
+	if err := srvr.StartupError(); err != nil {
+		srvr.Shutdown()
+		log.Fatalf("Failed to restore persistent state: %v", err)
+	}
 	// 启动服务
 
 	go srvr.StartRPCServer()
-
-	if err := srvr.StartHTTPServer(); err != nil {
-		log.Fatalf("HTTP server error: %v", err)
-	}
+	go func() {
+		if err := srvr.StartHTTPServer(); err != nil {
+			log.Printf("HTTP server error: %v", err)
+		}
+	}()
 
 	log.Printf("Node %d is running...", *id)
 
-	select {}
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	<-signals
+	signal.Stop(signals)
+	log.Printf("Node %d shutting down", *id)
+	srvr.Shutdown()
 }

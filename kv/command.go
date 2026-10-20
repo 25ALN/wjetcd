@@ -21,6 +21,7 @@ type Command struct {
 	Value       string
 	LeaseID     int64
 	TTL         int64
+	ExpireAt    int64
 	Revision    int64
 	Tombstone   bool
 	ExpectedRev int64

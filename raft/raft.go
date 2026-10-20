@@ -67,8 +67,9 @@ type Raft struct {
 	CommitIndex int // commitIndex是本机提交的
 	LastApplied int // lastApplied是该日志在所有的机器上都跑了一遍后才会更新？
 
-	ApplyHelper *ApplyHelper
-	applyCond   *sync.Cond
+	ApplyHelper     *ApplyHelper
+	applyCond       *sync.Cond
+	applySenderDone chan struct{}
 
 	snapshot                 []byte
 	snapshotLastIncludeIndex int
@@ -286,8 +287,16 @@ func (rf *Raft) Kill() {
 	rf.Mu.Lock()
 	defer rf.Mu.Unlock()
 	rf.ApplyHelper.Kill()
+	rf.applyCond.Broadcast()
 	log.Printf("%v : Raft instance is killed!!", rf.SayMeL())
 	rf.State = Follower
+}
+
+// WaitForApplyExit blocks until the service-facing committed-log applier has
+// drained its current queue and exited after Kill.
+func (rf *Raft) WaitForApplyExit() {
+	<-rf.applySenderDone
+	rf.ApplyHelper.Wait()
 }
 
 func (rf *Raft) killed() bool {
@@ -500,13 +509,14 @@ func (rf *Raft) SayMeL() string {
 
 // 通知tester（作用相当于状态机）接收这个日志消息，然后供状态机使用
 func (rf *Raft) sendMsgToTester() {
+	defer close(rf.applySenderDone)
 	rf.Mu.Lock()
 	defer rf.Mu.Unlock()
 	log.Printf("enter the sendMsgToTester")
 	for !rf.killed() {
 		log.Printf("%v: it is being blocked...", rf.SayMeL())
 		rf.applyCond.Wait()
-		for rf.LastApplied+1 <= rf.CommitIndex {
+		for rf.LastApplied+1 <= rf.CommitIndex && rf.LastApplied+1 <= rf.log.LastLogIndex {
 			i := rf.LastApplied + 1
 			rf.LastApplied++
 			if i < rf.log.FirstLogIndex {
@@ -514,12 +524,12 @@ func (rf *Raft) sendMsgToTester() {
 					rf.SayMeL(), i, rf.log.FirstLogIndex, rf.LastApplied)
 				panic("error happening")
 			}
-		msg := ApplyMsg{
-			CommandValid: true,
-			Command:      rf.log.getOneEntry(i).Command,
-			CommandIndex: i,
-		}
-		rf.ApplyHelper.tryApply(&msg)
+			msg := ApplyMsg{
+				CommandValid: true,
+				Command:      rf.log.getOneEntry(i).Command,
+				CommandIndex: i,
+			}
+			rf.ApplyHelper.tryApply(&msg)
 		}
 	}
 }
@@ -559,6 +569,7 @@ func Make(peers []string, me int,
 	// initialize from state persisted before a crash
 	rf.readPersist() // 持久化一定要在commitIndex,lastApplied,snapshotLastIncludeTerm,snapshotLastIncludeIndex 初始化之后执行，否则持久化后恢复的数据会被覆盖为0
 	rf.ApplyHelper = NewApplyHelper(applyCh, rf.LastApplied)
+	rf.applySenderDone = make(chan struct{})
 
 	rf.peerTrackers = make([]PeerTracker, len(rf.peers)) //对等节点追踪器
 	rf.applyCond = sync.NewCond(&rf.Mu)

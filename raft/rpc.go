@@ -44,6 +44,10 @@ func (rf *Raft) handleAppendEntriesRPC(args *RequestAppendEntriesArgs, reply *Re
 	rf.Mu.Lock()
 	defer rf.Mu.Unlock()
 	reply.FollowerTerm = rf.CurrentTerm
+	if rf.killed() {
+		reply.Success = false
+		return
+	}
 	if args.LeaderTerm < rf.CurrentTerm {
 		reply.Success = false
 		return
