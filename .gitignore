@@ -16,6 +16,10 @@ coverage.out
 test/
 tests/
 
+# 本地启动/停止脚本
+/start_*.sh
+/stop_*.sh
+
 # 知识总结、复习笔记
 *知识*.md
 *总结*.md
